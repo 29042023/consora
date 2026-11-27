@@ -8,7 +8,6 @@ Proyecto de tesis.
 | `web/consora` | Backend en **Django 5** + **Django REST Framework** (API JSON) y base **MySQL/MariaDB** |
 | `web/frontend` | Interfaz web en **React 18** (Vite, React Router, Bootstrap 5) |
 | `mobile` | Aplicación **Android** en **Kotlin** con base local **SQLite** |
-| `docs` | Documentación del proyecto |
 
 ## Web
 
