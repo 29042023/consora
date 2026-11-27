@@ -1,0 +1,14 @@
+# Archivos binarios: git no tiene que tocar sus finales de línea
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.jar  binary
+*.woff binary
+*.woff2 binary
+# Scripts de Gradle
+gradlew     text eol=lf
+*.bat       text eol=crlf

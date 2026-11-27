@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pestaña "Inicio" del menú inferior (asistente, proveedor y propietario) -->
+    <item name="nav_inicio" type="id" />
+    <!-- Pestaña "Reuniones" (proveedor: las reuniones a las que lo invitaron) -->
+    <item name="nav_reuniones" type="id" />
+</resources>

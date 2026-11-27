@@ -1,0 +1,180 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+{% if consorcio_filtrado %}
+<!-- Entrando desde un consorcio: pestañas de sus actividades -->
+<a href="{% url 'consorcios' %}" class="back-link mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Consorcios</a>
+{% include 'admin/_consorcio_tabs.html' with c=consorcio_filtrado activa='votaciones' %}
+{% endif %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>{% if consorcio_filtrado %}Votaciones de {{ consorcio_filtrado.name_consorcio }}{% else %}Votaciones{% endif %}</h2>
+        <p>Votaciones comunes (Sí / No / Abstención) y de contratación, para elegir entre propuestas de proveedores.</p>
+    </div>
+    {% if puede_gestionar %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#votacionModal"
+            {% if not mis_consorcios %}disabled{% endif %}>
+        <i class="bi bi-plus-lg me-1"></i> Nueva votación
+    </button>
+    {% endif %}
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los consorcios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    <div class="vote-chips">
+        <button type="submit" name="estado" value="" class="vote-chip{% if not filtro_estado %} active{% endif %}">Todas</button>
+        <button type="submit" name="estado" value="abiertas" class="vote-chip{% if filtro_estado == 'abiertas' %} active{% endif %}">Abiertas</button>
+        <button type="submit" name="estado" value="cerradas" class="vote-chip{% if filtro_estado == 'cerradas' %} active{% endif %}">Cerradas</button>
+    </div>
+</form>
+
+<!-- LISTA -->
+<div class="row g-3">
+    {% for v in votaciones %}
+    <div class="col-md-6 col-xl-4">
+        <a href="{% url 'votacion_detalle' v.id_votacion %}" class="vote-card">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <span class="vote-type {{ v.tipo }}">
+                    {% if v.tipo == 'contratacion' %}<i class="bi bi-briefcase"></i>{% else %}<i class="bi bi-people"></i>{% endif %}
+                    {{ v.get_tipo_display }}
+                </span>
+                {% if v.abierta and not v.lanzada %}
+                <span class="vote-state waiting"><i class="bi bi-hourglass-split"></i> Esperando proveedores</span>
+                {% elif v.abierta %}
+                <span class="vote-state open"><i class="bi bi-circle-fill"></i> Abierta</span>
+                {% else %}
+                <span class="vote-state closed">Cerrada</span>
+                {% endif %}
+            </div>
+            <p class="vote-detail">{{ v.detalle|truncatechars:120 }}</p>
+            <div class="vote-meta">
+                <span><i class="bi bi-building"></i> {{ v.consorcio.name_consorcio }}</span>
+                <span><i class="bi bi-clock"></i> {% if v.abierta %}Cierra{% else %}Cerró{% endif %} {{ v.fecha_limite|date:"d/m H:i" }}</span>
+            </div>
+            <div class="vote-foot">
+                <span><i class="bi bi-check2-all"></i> {{ v.cant_votos }} voto{{ v.cant_votos|pluralize }}</span>
+                {% if v.tipo == 'contratacion' %}<span><i class="bi bi-file-earmark-pdf"></i> {{ v.cant_propuestas }} propuesta{{ v.cant_propuestas|pluralize }}</span>{% endif %}
+                {% if v.ya_vote %}<span class="ms-auto text-success fw-semibold"><i class="bi bi-check-circle-fill"></i> Votaste</span>{% endif %}
+            </div>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <i class="bi bi-check2-square"></i>
+            <h5>No hay votaciones</h5>
+            <p>Creá una con "Nueva votación".</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+<!-- MODAL: NUEVA VOTACIÓN -->
+<div class="modal fade" id="votacionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nueva votación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Consorcio</label>
+                <select name="id_consorcio" class="form-select mb-3" required>
+                    {% for c in mis_consorcios %}
+                    <option value="{{ c.id_consorcio }}" {% if consorcio_filtrado.id_consorcio == c.id_consorcio %}selected{% endif %}>{{ c.name_consorcio }}</option>
+                    {% endfor %}
+                </select>
+
+                <label class="form-label small fw-semibold">Tipo</label>
+                <div class="vote-type-picker mb-3">
+                    <label>
+                        <input type="radio" name="tipo" value="comun" checked>
+                        <span><i class="bi bi-people"></i> <strong>Común</strong><small>Sí / No / Abstención</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="tipo" value="contratacion">
+                        <span><i class="bi bi-briefcase"></i> <strong>Contratación</strong><small>Elegir entre propuestas de proveedores</small></span>
+                    </label>
+                </div>
+
+                <!-- Contratación: proveedores a los que se les manda la invitación por chat -->
+                <div id="proveedoresBox" class="mb-3" hidden>
+                    <label class="form-label small fw-semibold">Proveedores a invitar</label>
+                    <p class="small text-secondary mb-2">Les llega una invitación por chat. La votación se lanza cuando alguno acepte.</p>
+                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar proveedor..." id="buscarProveedor">
+                    <div class="provider-picker">
+                        {% for p in proveedores %}
+                        <label class="provider-option" data-nombre="{{ p.name_surname|lower }}">
+                            <input type="checkbox" name="proveedores" value="{{ p.id_user }}">
+                            <span class="provider-option-avatar">
+                                {% if p.img %}<img src="{{ p.img|img_url }}" alt="" width="36" height="36">{% else %}{{ p.iniciales }}{% endif %}
+                            </span>
+                            <span class="provider-option-name">{{ p.name_surname }}</span>
+                            <i class="bi bi-check-circle-fill provider-option-check"></i>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <label class="form-label small fw-semibold">Detalle</label>
+                <textarea name="detalle" class="form-control mb-3" rows="3" placeholder="¿Qué se vota? Ej.: Pintura del hall de entrada" required></textarea>
+
+                <label class="form-label small fw-semibold">Fecha límite</label>
+                <input type="datetime-local" name="fecha_limite" class="form-control mb-3" value="{{ manana }}" min="{{ ahora_min }}" required>
+
+                <!-- doc_votacion: presupuestos, planos, fotos... (opcional, se pueden elegir varios) -->
+                <label class="form-label small fw-semibold">Documentos (opcional)</label>
+                <input type="file" name="docs" class="form-control" multiple
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,image/jpeg,image/png,image/gif,image/webp">
+                <div class="form-text">PDF, Word, Excel o fotos de hasta 15 MB. Los ven todos los que votan.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Crear votación</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block js %}
+<script>
+    // Al elegir "Contratación" aparece la lista de proveedores para invitar
+    const box = document.getElementById('proveedoresBox');
+    function mostrarProveedores() {
+        box.hidden = document.querySelector('input[name="tipo"]:checked').value !== 'contratacion';
+    }
+    document.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', mostrarProveedores));
+    mostrarProveedores();
+
+    // Buscador de proveedores
+    document.getElementById('buscarProveedor').addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        document.querySelectorAll('.provider-option').forEach(op => op.hidden = q && !op.dataset.nombre.includes(q));
+    });
+
+    // En contratación hay que elegir al menos uno
+    document.querySelector('#votacionModal form').addEventListener('submit', function (e) {
+        const esContratacion = document.querySelector('input[name="tipo"]:checked').value === 'contratacion';
+        if (esContratacion && !document.querySelector('input[name="proveedores"]:checked')) {
+            e.preventDefault();
+            alert('Elegí al menos un proveedor para invitar.');
+        }
+    });
+</script>
+{% endblock %}

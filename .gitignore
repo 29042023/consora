@@ -1,0 +1,45 @@
+# --- Secretos: nunca se suben ---
+.env
+*.env
+!.env.example
+local.properties
+
+# --- Web (Django) ---
+venv/
+venv_local/
+__pycache__/
+*.pyc
+db.sqlite3
+# Archivos que suben los usuarios (solo se versionan los de ejemplo del seed)
+web/consora/media/*
+!web/consora/media/img/
+!web/consora/media/docs/
+web/consora/media/docs/*
+!web/consora/media/docs/votaciones/
+web/consora/media/docs/votaciones/*
+!web/consora/media/docs/votaciones/ejemplos/
+web/consora/media/img/usuarios/*
+!web/consora/media/img/usuarios/avatar_*
+
+# --- Web (React) ---
+node_modules/
+dist/
+# Build de React que sirve Django en /app/ (se genera con npm run build)
+web/consora/web/static/app/
+
+# --- Mobile (Android) ---
+.gradle/
+mobile/build/
+mobile/app/build/
+mobile/.idea/
+mobile/.kotlin/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*

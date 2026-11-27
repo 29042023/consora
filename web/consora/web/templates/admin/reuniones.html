@@ -1,0 +1,227 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load static consora_tags %}
+
+{% block content %}
+
+{% if consorcio_filtrado %}
+<!-- Entrando desde un consorcio: pestañas de sus actividades -->
+<a href="{% url 'consorcios' %}" class="back-link mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Consorcios</a>
+{% include 'admin/_consorcio_tabs.html' with c=consorcio_filtrado activa='reuniones' %}
+{% endif %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>{% if consorcio_filtrado %}Reuniones de {{ consorcio_filtrado.name_consorcio }}{% else %}Reuniones{% endif %}</h2>
+        <p>Reuniones virtuales con Google Meet o presenciales. Podés invitar a un proveedor: participa si acepta.</p>
+    </div>
+    {% if puede_gestionar %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#reunionModal"
+            {% if not mis_consorcios %}disabled{% endif %}>
+        <img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo on-btn me-1"> Crear Meet
+    </button>
+    {% endif %}
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    {% if mis_consorcios %}
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los consorcios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    <div class="vote-chips">
+        <button type="submit" name="estado" value="proximas" class="vote-chip{% if filtro_estado != 'pasadas' %} active{% endif %}">Próximas</button>
+        <button type="submit" name="estado" value="pasadas" class="vote-chip{% if filtro_estado == 'pasadas' %} active{% endif %}">Pasadas y canceladas</button>
+    </div>
+</form>
+
+<!-- LISTA -->
+<div class="row g-3">
+    {% for r in reuniones %}
+    <div class="col-md-6 col-xl-4">
+        <a href="{% url 'reunion_detalle' r.id_reunion %}" class="vote-card">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <span class="meet-type {{ r.modalidad }}">
+                    {% if r.es_virtual %}<img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo">{% else %}<i class="bi bi-geo-alt"></i>{% endif %}
+                    {{ r.get_modalidad_display }}
+                </span>
+                <span class="meet-state {{ r.estado_actual }}">
+                    {% if r.estado_actual == 'en_curso' %}<i class="bi bi-circle-fill"></i>{% endif %}
+                    {{ r.estado_actual_display }}
+                </span>
+            </div>
+            <p class="vote-detail fw-semibold mb-1">{{ r.titulo }}</p>
+            {% if r.descripcion %}<p class="vote-detail small text-secondary">{{ r.descripcion|truncatechars:90 }}</p>{% endif %}
+            <div class="vote-meta">
+                <span><i class="bi bi-building"></i> {{ r.consorcio.name_consorcio }}</span>
+                <span><i class="bi bi-calendar-event"></i> {{ r.fecha_inicio|date:"d/m H:i" }} a {{ r.fecha_fin|date:"H:i" }}</span>
+            </div>
+            <div class="vote-foot">
+                <span><i class="bi bi-people"></i> {{ r.cant_confirmados }} confirmado{{ r.cant_confirmados|pluralize }}</span>
+                {% if r.es_virtual and r.meet_link %}<span><i class="bi bi-link-45deg"></i> Meet listo</span>{% endif %}
+                {% if r.mi_respuesta == 'pendiente' %}<span class="ms-auto text-warning-emphasis fw-semibold"><i class="bi bi-hourglass-split"></i> Confirmá</span>
+                {% elif r.mi_respuesta == 'acepta' %}<span class="ms-auto text-success fw-semibold"><i class="bi bi-check-circle-fill"></i> Vas</span>
+                {% elif r.mi_respuesta == 'rechaza' %}<span class="ms-auto text-secondary fw-semibold">No vas</span>{% endif %}
+            </div>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <i class="bi bi-camera-video"></i>
+            <h5>{% if filtro_estado == 'pasadas' %}No hay reuniones pasadas{% else %}No hay reuniones próximas{% endif %}</h5>
+            <p>{% if puede_gestionar %}Creá una con "Crear Meet".{% else %}Cuando se programe una reunión, la vas a ver acá.{% endif %}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+{% if puede_gestionar %}
+<!-- MODAL: CREAR REUNIÓN -->
+<div class="modal fade" id="reunionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nueva reunión</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Consorcio</label>
+                <select name="id_consorcio" class="form-select mb-3" required>
+                    {% for c in mis_consorcios %}
+                    <option value="{{ c.id_consorcio }}" {% if consorcio_filtrado.id_consorcio == c.id_consorcio %}selected{% endif %}>{{ c.name_consorcio }}</option>
+                    {% endfor %}
+                </select>
+
+                <label class="form-label small fw-semibold">Modalidad</label>
+                <div class="vote-type-picker mb-3">
+                    <label>
+                        <input type="radio" name="modalidad" value="virtual" checked>
+                        <span><img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo lg"> <strong>Virtual</strong><small>Con link de Google Meet</small></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="modalidad" value="presencial">
+                        <span><i class="bi bi-geo-alt"></i> <strong>Presencial</strong><small>En el edificio u otro lugar</small></span>
+                    </label>
+                </div>
+
+                <label class="form-label small fw-semibold">Título</label>
+                <input type="text" name="titulo" class="form-control mb-3" maxlength="150" placeholder="Ej.: Asamblea ordinaria" required>
+
+                <label class="form-label small fw-semibold">Descripción u orden del día (opcional)</label>
+                <textarea name="descripcion" class="form-control mb-3" rows="2" placeholder="Temas a tratar"></textarea>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label small fw-semibold">Fecha y hora</label>
+                        <input type="datetime-local" name="fecha_inicio" class="form-control" value="{{ inicio_sugerido }}" min="{{ ahora_min }}" required>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small fw-semibold">Duración</label>
+                        <select name="duracion" class="form-select">
+                            {% for minutos, texto in duraciones %}<option value="{{ minutos }}" {% if minutos == 60 %}selected{% endif %}>{{ texto }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Virtual: con Google vinculado el link se genera solo; si no, se pega a mano -->
+                <div id="boxVirtual" class="mb-3">
+                    {% if google_disponible and google_vinculada %}
+                    <div class="meet-note ok"><img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo"> Se va a crear en tu Google Calendar ({{ google_vinculada.google_email }}) con el link de Meet, y les llega la invitación a los participantes.</div>
+                    <details class="mt-2">
+                        <summary class="small text-secondary">Prefiero pegar un link propio</summary>
+                        <input type="url" name="meet_link" class="form-control form-control-sm mt-2" placeholder="https://meet.google.com/abc-defg-hij">
+                    </details>
+                    {% else %}
+                    <label class="form-label small fw-semibold">Link de Meet (opcional)</label>
+                    <input type="url" name="meet_link" class="form-control" placeholder="https://meet.google.com/abc-defg-hij">
+                    <div class="form-text">Si vinculás tu cuenta de Google desde <a href="{% url 'cuenta' %}">Mi cuenta</a>, el link se genera solo.</div>
+                    {% endif %}
+                </div>
+                <div id="boxPresencial" class="mb-3" hidden>
+                    <label class="form-label small fw-semibold">Lugar</label>
+                    <input type="text" name="lugar" class="form-control" maxlength="255" placeholder="Ej.: SUM del edificio, planta baja">
+                </div>
+
+                <!-- Invitar proveedor (opcional): le llega por chat y participa solo si acepta -->
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="invitarProveedor" name="invitar_proveedor" value="1">
+                    <label class="form-check-label small fw-semibold" for="invitarProveedor">Invitar proveedor</label>
+                </div>
+                <div id="proveedoresBox" class="mb-3" hidden>
+                    <p class="small text-secondary mb-2">Le llega una invitación por chat. Se suma a la reunión (y ve el link) cuando la acepta.</p>
+                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Buscar proveedor..." id="buscarProveedor">
+                    <div class="provider-picker">
+                        {% for p in proveedores %}
+                        <label class="provider-option" data-nombre="{{ p.name_surname|lower }}">
+                            <input type="checkbox" name="proveedores" value="{{ p.id_user }}">
+                            <span class="provider-option-avatar">
+                                {% if p.img %}<img src="{{ p.img|img_url }}" alt="" width="36" height="36">{% else %}{{ p.iniciales }}{% endif %}
+                            </span>
+                            <span class="provider-option-name">{{ p.name_surname }}</span>
+                            <i class="bi bi-check-circle-fill provider-option-check"></i>
+                        </label>
+                        {% empty %}
+                        <p class="small text-secondary mb-0">No hay proveedores registrados.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <label class="form-label small fw-semibold">Documentos (opcional)</label>
+                <input type="file" name="docs" class="form-control" multiple
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,image/jpeg,image/png,image/gif,image/webp">
+                <div class="form-text">Orden del día u otros archivos: PDF, Word, Excel o fotos de hasta 15 MB.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Crear reunión</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block js %}
+{% if puede_gestionar %}
+<script>
+    // Virtual: link de Meet / Presencial: lugar
+    const boxVirtual = document.getElementById('boxVirtual');
+    const boxPresencial = document.getElementById('boxPresencial');
+    function mostrarModalidad() {
+        const virtual = document.querySelector('input[name="modalidad"]:checked').value === 'virtual';
+        boxVirtual.hidden = !virtual;
+        boxPresencial.hidden = virtual;
+        boxPresencial.querySelector('input').required = !virtual;
+    }
+    document.querySelectorAll('input[name="modalidad"]').forEach(r => r.addEventListener('change', mostrarModalidad));
+    mostrarModalidad();
+
+    // "Invitar proveedor" muestra la lista de proveedores
+    const switchProveedor = document.getElementById('invitarProveedor');
+    const box = document.getElementById('proveedoresBox');
+    switchProveedor.addEventListener('change', () => box.hidden = !switchProveedor.checked);
+
+    document.getElementById('buscarProveedor').addEventListener('input', function () {
+        const q = this.value.trim().toLowerCase();
+        document.querySelectorAll('.provider-option').forEach(op => op.hidden = q && !op.dataset.nombre.includes(q));
+    });
+
+    document.querySelector('#reunionModal form').addEventListener('submit', function (e) {
+        if (switchProveedor.checked && !document.querySelector('input[name="proveedores"]:checked')) {
+            e.preventDefault();
+            alert('Elegí el proveedor a invitar, o destildá "Invitar proveedor".');
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

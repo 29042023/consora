@@ -1,0 +1,9 @@
+<resources>
+    <!-- Android 12+: el sistema muestra primero su propia pantalla de inicio con el
+         símbolo del logo sobre blanco, y enseguida aparece SplashActivity. -->
+    <style name="Theme.Consora.Splash" parent="Theme.Consora_mobile">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:windowSplashScreenBackground">@color/white</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+</resources>

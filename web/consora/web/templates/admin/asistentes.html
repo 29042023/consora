@@ -1,0 +1,396 @@
+{% load static consora_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Consora | Asistentes</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <!-- CSS propio -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/asistentes.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/paginas.css' %}?v=7">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+</head>
+
+<body>
+
+<div class="admin-shell">
+
+    {% include 'layouts/users/admin/menu.html' %}
+
+    <div class="admin-main">
+
+        {% include 'layouts/users/admin/header.html' %}
+
+        <!-- CONTENIDO -->
+        <main class="admin-content">
+
+
+            <div class="page-header-row">
+                <h2>Asistentes de tu equipo</h2>
+                <p>Creá cuentas, delegá qué consorcios gestiona cada uno y revisá su actividad. Tocá una tarjeta para ver el detalle completo.</p>
+            </div>
+
+            <!-- MÉTRICAS -->
+            <div class="row g-3 mb-4">
+                <div class="col-sm-4">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></div>
+                        <div>
+                            <p class="metric-value">{{ total_asistentes }}</p>
+                            <small class="metric-label">Asistentes totales</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-success-subtle text-success"><i class="bi bi-person-check"></i></div>
+                        <div>
+                            <p class="metric-value">{{ asistentes_activos }}</p>
+                            <small class="metric-label">Activos</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-info-subtle text-info"><i class="bi bi-buildings"></i></div>
+                        <div>
+                            <p class="metric-value">{{ consorcios_delegados }}</p>
+                            <small class="metric-label">Consorcios delegados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRILLA DE ASISTENTES (3 por fila máximo) -->
+            <div class="row g-4">
+
+                {% for asistente in lista_asistentes %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="assistant-tile" data-bs-toggle="modal" data-bs-target="#detail{{ asistente.id_asistente }}">
+                        <div class="tile-banner{% if not asistente.habilitado %} suspended{% endif %}">
+                            <span class="tile-status-corner{% if asistente.habilitado %} active{% else %} suspended{% endif %}">
+                                {% if asistente.habilitado %}Activo{% else %}Suspendido{% endif %}
+                            </span>
+                            <div class="tile-avatar">
+                    {% if asistente.usuario.img %}<img src="{{ asistente.usuario.img|img_url }}" alt="" width="62" height="62">{% else %}{{ asistente.usuario.name_surname|first }}{% endif %}
+                </div>
+                        </div>
+                        <div class="tile-body">
+                            <h5>{{ asistente.usuario.name_surname }}</h5>
+                            <div class="tile-mail">{{ asistente.usuario.mail }}</div>
+
+                            <div class="tile-meta-row">
+                                <i class="bi bi-buildings"></i> {{ asistente.consorcios_asignados.count }} consorcios asignados
+                            </div>
+                            <div class="tile-meta-row">
+                                <i class="bi bi-list-check"></i> {{ asistente.tareas_en_proceso }} tarea{{ asistente.tareas_en_proceso|pluralize }} en proceso
+                            </div>
+
+                            <div class="tile-switch-row">
+                                <span class="text-link">Ver detalles <i class="bi bi-arrow-right"></i></span>
+                                <form method="post" class="form-check form-switch mb-0" onclick="event.stopPropagation()">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="habilitar_asistente">
+                                    <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                                    <input class="form-check-input" type="checkbox" role="switch" {% if asistente.habilitado %}checked{% endif %} onchange="this.form.submit()">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- TARJETA: COMPRAR CUENTA DE ASISTENTE -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="buy-tile">
+                        <div class="buy-tile-icon">
+                            <i class="bi bi-person-plus-fill"></i>
+                        </div>
+                        <h5>Sumá otro asistente</h5>
+                        <p>Agregá una cuenta más a tu equipo y asignale los consorcios que necesites.</p>
+                        <div class="buy-tile-price">
+                            <span class="price-dash"></span>
+                            <small>/asistente /mes</small>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm px-3">
+                            <i class="bi bi-plus-lg me-1"></i> Comprar cuenta
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+                </main>
+
+    </div>
+
+</div>
+
+
+<!-- =========================
+     MODAL DETALLE DE ASISTENTE (uno por cada uno, generado dinámicamente)
+========================= -->
+{% for asistente in lista_asistentes %}
+<div class="modal fade" id="detail{{ asistente.id_asistente }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content overflow-hidden">
+
+            <div class="detail-header{% if not asistente.habilitado %} suspended{% endif %}">
+                <div class="detail-header-avatar">
+                    {% if asistente.usuario.img %}<img src="{{ asistente.usuario.img|img_url }}" alt="" width="56" height="56">{% else %}{{ asistente.usuario.name_surname|first }}{% endif %}
+                </div>
+                <div class="flex-grow-1">
+                    <h5>{{ asistente.usuario.name_surname }}</h5>
+                    <small>{{ asistente.usuario.mail }}</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-label">Datos de la cuenta</div>
+                <div class="detail-row">
+                    <span>Estado</span>
+                    <span class="{% if asistente.habilitado %}text-success{% else %}text-secondary{% endif %}">
+                        {% if asistente.habilitado %}Activo{% else %}Suspendido{% endif %}
+                    </span>
+                </div>
+                <div class="detail-row"><span>Asistente desde</span><span>{{ asistente.creado_en|date:"d/m/Y" }}</span></div>
+                <div class="detail-row"><span>Creado por</span><span>{{ asistente.admin.name_surname }}</span></div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-label">Consorcios asignados</div>
+                <!-- Lista con foto, nombre y dirección; el switch habilita o deshabilita al asistente en ese edificio -->
+                <div class="consorcio-list">
+                    {% for asignacion in asistente.consorcios_asignados.all %}
+                    <form method="post" class="consorcio-item{% if not asignacion.habilitado %} disabled{% endif %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="habilitar_consorcio">
+                        <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                        <input type="hidden" name="id_asignacion" value="{{ asignacion.id_asistente_consorcio }}">
+                        <div class="consorcio-item-img">
+                            {% if asignacion.consorcio.img_consorcio %}
+                            <img src="{{ asignacion.consorcio.img_consorcio|img_url }}" alt="" width="44" height="44">
+                            {% else %}<i class="bi bi-building"></i>{% endif %}
+                        </div>
+                        <div class="consorcio-item-info">
+                            <div class="consorcio-item-name">{{ asignacion.consorcio.name_consorcio }}</div>
+                            <div class="consorcio-item-sub">
+                                {{ asignacion.consorcio.direccion }} · {% if asignacion.habilitado %}Habilitado{% else %}Deshabilitado{% endif %}
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" title="Habilitar en este consorcio"
+                                   {% if asignacion.habilitado %}checked{% endif %} onchange="this.form.submit()">
+                        </div>
+                    </form>
+                    {% empty %}
+                    <span class="text-secondary small">Todavía no tiene consorcios asignados.</span>
+                    {% endfor %}
+                </div>
+
+                <div class="consorcios-row mt-2">
+                    {% if mis_consorcios %}
+                    <div class="dropdown">
+                        <button type="button" class="add-consorcio-chip" data-bs-toggle="dropdown"><i class="bi bi-plus-lg"></i> Asignar</button>
+                        <ul class="dropdown-menu">
+                            {% for c in mis_consorcios %}
+                            <li>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="asignar_consorcio">
+                                    <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                                    <input type="hidden" name="id_consorcio" value="{{ c.id_consorcio }}">
+                                    <button type="submit" class="dropdown-item">{{ c.name_consorcio }}</button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-label">Tareas</div>
+
+                <!-- Tocando la tarea se marca como completada (o vuelve a en proceso) -->
+                <div class="task-list">
+                    {% for tarea in asistente.tareas_list %}
+                    <div class="task-item{% if tarea.completada %} done{% endif %}">
+                        <form method="post" class="flex-grow-1">
+                            {% csrf_token %}
+                            <input type="hidden" name="accion" value="cambiar_tarea">
+                            <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                            <input type="hidden" name="id_tarea" value="{{ tarea.id_tarea }}">
+                            <button type="submit" class="task-toggle" title="{% if tarea.completada %}Volver a en proceso{% else %}Marcar como completada{% endif %}">
+                                <i class="bi {% if tarea.completada %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                                <span>{{ tarea.descripcion }}</span>
+                            </button>
+                        </form>
+                        <small class="text-secondary text-nowrap">{{ tarea.created_at|date:"d/m" }}</small>
+                        <form method="post" onsubmit="return confirm('¿Borrar esta tarea?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="accion" value="borrar_tarea">
+                            <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                            <input type="hidden" name="id_tarea" value="{{ tarea.id_tarea }}">
+                            <button type="submit" class="btn-icon-soft" title="Borrar"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                    {% empty %}
+                    <div class="text-secondary small py-1">No tiene tareas asignadas.</div>
+                    {% endfor %}
+                </div>
+
+                <form method="post" class="task-new">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="nueva_tarea">
+                    <input type="hidden" name="id_asistente" value="{{ asistente.id_asistente }}">
+                    <input type="text" name="descripcion" class="form-control form-control-sm" placeholder="Nueva tarea..." required>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                </form>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-label">Historial de actividad</div>
+
+                <div class="activity-filters">
+                    <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        style="width:170px;"
+                        placeholder="Buscar en el historial..."
+                        oninput="filterActivity('activity{{ asistente.id_asistente }}', {texto: this.value})"
+                    >
+                    <select class="form-select form-select-sm" style="width:auto;" onchange="filterActivity('activity{{ asistente.id_asistente }}', {tipo: this.value})">
+                        <option value="todos">Todos los tipos</option>
+                        <option value="solicitud">Solicitudes</option>
+                        <option value="mensaje">Mensajes</option>
+                        <option value="presupuesto">Presupuestos</option>
+                        <option value="factura">Facturas</option>
+                        <option value="acceso">Accesos y permisos</option>
+                    </select>
+                    <select class="form-select form-select-sm" style="width:auto;" onchange="filterActivity('activity{{ asistente.id_asistente }}', {dias: this.value})">
+                        <option value="todo">Todo el historial</option>
+                        <option value="7">Últimos 7 días</option>
+                        <option value="30">Últimos 30 días</option>
+                    </select>
+                    <div class="form-check form-check-inline ms-1 mb-0">
+                        <input class="form-check-input" type="checkbox" id="onlyDocs{{ asistente.id_asistente }}"
+                               onchange="filterActivity('activity{{ asistente.id_asistente }}', {soloDocs: this.checked})">
+                        <label class="form-check-label small" for="onlyDocs{{ asistente.id_asistente }}">Con documentos</label>
+                    </div>
+                </div>
+
+                <div class="activity-list-scroll" id="activity{{ asistente.id_asistente }}">
+                    {% for evento in asistente.historial_list %}
+                    <div class="activity-item" data-type="{{ evento.motivo.categoria }}" data-dias="{{ evento.dias_ago }}" data-has-docs="{% if evento.documentos.all %}1{% else %}0{% endif %}">
+                        <div class="activity-icon">
+                            {% if evento.motivo.categoria == 'mensaje' %}<i class="bi bi-chat-dots"></i>
+                            {% elif evento.motivo.categoria == 'solicitud' %}<i class="bi bi-tools"></i>
+                            {% elif evento.motivo.categoria == 'presupuesto' %}<i class="bi bi-file-earmark-check"></i>
+                            {% elif evento.motivo.categoria == 'factura' %}<i class="bi bi-receipt"></i>
+                            {% else %}<i class="bi bi-person-check"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="activity-text">
+                                {{ evento.descripcion }}
+                                <span class="activity-type-tag {{ evento.motivo.categoria }}">{{ evento.motivo.categoria|capfirst }}</span>
+                            </p>
+                            <span class="activity-time">
+                                {{ evento.creado_en|date:"d/m/Y H:i" }}
+                                {% if evento.usuario_involucrado %} · con {{ evento.usuario_involucrado.name_surname }}{% endif %}
+                            </span>
+                            {% if evento.documentos.all %}
+                            <div class="activity-docs">
+                                {% for doc in evento.documentos.all %}
+                                <a href="#" class="activity-doc-link" onclick="event.preventDefault(); showDoc('{{ doc.doc|escapejs }}')">
+                                    <i class="bi bi-paperclip"></i> {{ doc.doc }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-secondary small py-2">Todavía no hay actividad registrada para este asistente.</div>
+                    {% endfor %}
+                </div>
+
+                <div class="activity-empty" id="activity{{ asistente.id_asistente }}Empty">No hay actividad para este filtro.</div>
+            </div>
+
+            <div class="detail-footer">
+                <a href="#" class="text-danger small text-decoration-none"><i class="bi bi-trash me-1"></i> Eliminar asistente</a>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+<!-- =========================
+     MODAL: VISOR DE DOCUMENTO (compartida por todos los eventos)
+========================= -->
+<div class="modal fade" id="docViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark me-2"></i>Documento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-5">
+                <i class="bi bi-file-earmark-text" style="font-size:3rem; color:var(--primary);"></i>
+                <p class="fw-bold mt-3 mb-1" id="docViewerName">--</p>
+                <p class="text-secondary small">
+                    <!-- TODO: cuando exista almacenamiento real de archivos, mostrar acá
+                         la vista previa (imagen/PDF embebido) en vez de solo el nombre. -->
+                    Vista previa no disponible todavía.
+                </p>
+                <a href="#" class="btn btn-outline-primary btn-sm" onclick="event.preventDefault()">
+                    <i class="bi bi-download me-1"></i> Descargar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JS propio -->
+<script src="{% static 'js/admin_dashboard.js' %}"></script>
+<script src="{% static 'js/asistentes.js' %}"></script>
+
+{% if abrir %}
+<script>
+    // Después de una acción (tarea, edificio...) se vuelve a abrir el detalle del asistente
+    const detalle = document.getElementById('detail{{ abrir|escapejs }}');
+    if (detalle) bootstrap.Modal.getOrCreateInstance(detalle).show();
+</script>
+{% endif %}
+
+</body>
+</html>

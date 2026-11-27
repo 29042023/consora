@@ -1,0 +1,140 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+{% if consorcio_filtrado %}
+<a href="{% url 'consorcios' %}" class="back-link mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Consorcios</a>
+{% include 'admin/_consorcio_tabs.html' with c=consorcio_filtrado activa='historial' %}
+{% endif %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>{% if consorcio_filtrado %}Historial de {{ consorcio_filtrado.name_consorcio }}{% else %}Historial de los edificios{% endif %}</h2>
+        <p>Contratos, pagos, votaciones, reuniones y obras, en orden de fecha.</p>
+    </div>
+    {% if gestionables %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#historialModal">
+        <i class="bi bi-plus-lg me-1"></i> Agregar entrada
+    </button>
+    {% endif %}
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    {% if mis_consorcios|length > 1 or not consorcio_filtrado %}
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los edificios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    {% else %}
+    <input type="hidden" name="consorcio" value="{{ filtro_consorcio }}">
+    {% endif %}
+    <select name="categoria" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todo</option>
+        {% for valor, texto in categorias %}
+        <option value="{{ valor }}" {% if filtro_categoria == valor %}selected{% endif %}>{{ texto }}</option>
+        {% endfor %}
+    </select>
+    <div class="d-flex align-items-center gap-2 small">
+        <span class="text-secondary">Desde</span>
+        <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm" onchange="this.form.submit()">
+        <span class="text-secondary">hasta</span>
+        <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm" onchange="this.form.submit()">
+    </div>
+    {% if filtro_categoria or desde or hasta %}
+    <a href="?consorcio={{ filtro_consorcio }}" class="small">Limpiar filtros</a>
+    {% endif %}
+</form>
+
+<!-- LÍNEA DE TIEMPO -->
+{% for mes in meses %}
+<div class="history-month">{{ mes.titulo }}</div>
+<div class="panel-card mb-4" style="height:auto;">
+    {% for h in mes.eventos %}
+    <div class="history-row">
+        <div class="history-icon {{ h.categoria }}">
+            {% if h.categoria == 'contrato' %}<i class="bi bi-file-earmark-text"></i>
+            {% elif h.categoria == 'pago' %}<i class="bi bi-cash-coin"></i>
+            {% elif h.categoria == 'votacion' %}<i class="bi bi-check2-square"></i>
+            {% elif h.categoria == 'reunion' %}<i class="bi bi-camera-video"></i>
+            {% elif h.categoria == 'obra' %}<i class="bi bi-tools"></i>
+            {% else %}<i class="bi bi-info-circle"></i>{% endif %}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+            <div class="history-text">{{ h.descripcion }}</div>
+            <div class="invoice-meta">
+                <span class="chip-soft">{{ h.get_categoria_display }}</span>
+                {% if not consorcio_filtrado %}{{ h.consorcio.name_consorcio }} · {% endif %}
+                {{ h.fecha|date:"d/m/Y" }}{% if not h.manual %} {{ h.time|time:"H:i" }}{% endif %}
+                {% if h.usuario %} · {{ h.usuario.name_surname }}{% endif %}
+            </div>
+        </div>
+        {% if h.manual and h.consorcio in gestionables %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="borrar">
+            <input type="hidden" name="id_historial" value="{{ h.pk }}">
+            <button type="submit" class="btn btn-link btn-sm text-danger p-0" title="Eliminar"
+                    onclick="return confirm('¿Eliminar esta entrada del historial?')"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="bi bi-clock-history"></i>
+    <h5>No hay movimientos</h5>
+    <p>{% if filtro_categoria or desde or hasta %}Probá con otros filtros.{% else %}Lo que pase en el edificio se va a ir registrando acá.{% endif %}</p>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+
+{% block modals %}
+{% if gestionables %}
+<!-- MODAL: ENTRADA MANUAL (obras, mantenimiento u otros) -->
+<div class="modal fade" id="historialModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="agregar">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Agregar al historial</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Edificio</label>
+                <select name="id_consorcio" class="form-select mb-3" required>
+                    {% for c in gestionables %}
+                    <option value="{{ c.id_consorcio }}" {% if consorcio_filtrado.id_consorcio == c.id_consorcio %}selected{% endif %}>{{ c.name_consorcio }}</option>
+                    {% endfor %}
+                </select>
+                <div class="row g-2 mb-3">
+                    <div class="col-7">
+                        <label class="form-label small fw-semibold">Tipo</label>
+                        <select name="categoria" class="form-select">
+                            {% for valor, texto in manuales %}<option value="{{ valor }}">{{ texto }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label small fw-semibold">Fecha</label>
+                        <input type="date" name="fecha" class="form-control" value="{{ hoy|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+                <label class="form-label small fw-semibold">Qué pasó</label>
+                <textarea name="descripcion" class="form-control" rows="2" maxlength="255" placeholder="Ej.: Se pintó el hall de entrada" required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

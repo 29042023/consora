@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla de carga: logo animado, barra de progreso y mensajes de estado -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:clipChildren="false"
+    tools:context=".SplashActivity">
+
+    <!-- Círculos decorativos de fondo -->
+    <View
+        android:id="@+id/circuloArriba"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-120dp"
+        android:layout_marginEnd="-140dp"
+        android:background="@drawable/bg_circle_teal_soft" />
+
+    <View
+        android:id="@+id/circuloAbajo"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="-120dp"
+        android:layout_marginBottom="80dp"
+        android:background="@drawable/bg_circle_navy_soft" />
+
+    <!-- Silueta de edificios al pie -->
+    <ImageView
+        android:id="@+id/skyline"
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_gravity="bottom"
+        android:alpha="0"
+        android:importantForAccessibility="no"
+        android:scaleType="fitEnd"
+        android:src="@drawable/img_consorcio_default"
+        app:tint="@color/consora_teal_light" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="40dp"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="32dp"
+        android:paddingEnd="32dp">
+
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="260dp"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:alpha="0"
+            android:contentDescription="@string/login_logo_desc"
+            android:src="@drawable/logo_consora_full" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress"
+            android:layout_width="180dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:alpha="0"
+            android:indeterminate="true"
+            app:indicatorColor="@color/consora_teal"
+            app:trackColor="@color/consora_teal_light"
+            app:trackCornerRadius="4dp"
+            app:trackThickness="5dp" />
+
+        <TextView
+            android:id="@+id/tvEstado"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:alpha="0"
+            android:text="@string/splash_estado_1"
+            android:textColor="@color/consora_gray"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Pie: versión -->
+    <LinearLayout
+        android:id="@+id/pie"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:alpha="0"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/splash_lema"
+            android:textColor="@color/consora_navy"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/consora_gray"
+            android:textSize="12sp"
+            tools:text="Versión 1.0" />
+    </LinearLayout>
+</FrameLayout>

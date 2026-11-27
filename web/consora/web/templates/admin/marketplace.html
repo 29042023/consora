@@ -1,0 +1,119 @@
+{% load static consora_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Consora | Marketplace</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <!-- CSS propio -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/marketplace.css' %}?v=2">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+</head>
+
+<body>
+
+<div class="admin-shell">
+
+    {% include 'layouts/users/admin/menu.html' %}
+
+    <div class="admin-main">
+
+        {% include 'layouts/users/admin/header.html' %}
+
+        <!-- CONTENIDO -->
+        <main class="admin-content">
+
+            <!-- BUSCADOR + FILTRO -->
+            <form method="get" class="market-search-row">
+                <div class="market-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="q" value="{{ busqueda|default:'' }}" placeholder="{{ buscador_placeholder }}">
+                </div>
+
+                <!-- Filtro: por ahora solo visual -->
+                <button type="button" class="market-filter-btn" title="Filtros">
+                    <i class="bi bi-sliders"></i>
+                </button>
+            </form>
+
+            <!-- GRILLA DE PUBLICACIONES -->
+            <div class="market-grid">
+                {% for pub in publicaciones %}
+                <a href="{{ pub.url|default:'#' }}" class="market-tile tema-{{ pub.tema }}"{% if not pub.url %} onclick="event.preventDefault()"{% endif %}>
+
+                    {% if pub.img %}
+                    <img src="{{ pub.img|img_url }}" alt="" class="market-tile-img">
+                    {% elif pub.icono %}
+                    <i class="bi {{ pub.icono }} market-tile-bg-icon"></i>
+                    {% else %}
+                    <span class="market-tile-bg-icon market-tile-initials">{{ pub.iniciales }}</span>
+                    {% endif %}
+
+                    <span class="market-tile-type">
+                        {% if pub.tipo == 'video' %}
+                            <i class="bi bi-play-btn-fill"></i>
+                        {% elif pub.tipo == 'album' %}
+                            <i class="bi bi-images"></i>
+                        {% endif %}
+                    </span>
+
+                    {% if pub.etiqueta %}<span class="market-tile-rubro">{{ pub.etiqueta }}</span>{% endif %}
+
+                    <div class="market-tile-info">
+                        <p class="market-tile-text">{{ pub.texto }}</p>
+                        <div class="market-tile-provider">
+                            {% if pub.autor_img %}
+                            <img src="{{ pub.autor_img|img_url }}" alt="" class="market-tile-avatar">
+                            {% else %}
+                            <span class="market-tile-avatar">{{ pub.autor|slice:":1" }}</span>
+                            {% endif %}
+                            <span>{{ pub.autor }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Se ve al pasar el mouse -->
+                    <div class="market-tile-hover">
+                        {% for icono, valor in pub.stats %}
+                        <span><i class="bi {{ icono }}"></i> {{ valor }}</span>
+                        {% endfor %}
+                    </div>
+
+                </a>
+                {% empty %}
+                <div class="market-empty">
+                    <i class="bi bi-shop"></i>
+                    <p>{% if busqueda %}No hay resultados para "{{ busqueda }}".{% else %}Todavía no hay publicaciones.{% endif %}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+        </main>
+
+    </div>
+
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

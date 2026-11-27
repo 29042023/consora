@@ -1,0 +1,91 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>Facturas procesadas</h2>
+        <p>Facturas cargadas de todos tus consorcios. Se cargan desde la Facturación de cada edificio.</p>
+    </div>
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los consorcios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    <select name="tipo" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los tipos</option>
+        {% for t in tipos %}
+        <option value="{{ t.id_tipo_deuda }}" {% if filtro_tipo == t.id_tipo_deuda|stringformat:'s' %}selected{% endif %}>{{ t.nombre }}</option>
+        {% endfor %}
+    </select>
+    <input type="search" name="q" value="{{ busqueda }}" class="form-control form-control-sm" style="max-width: 240px;" placeholder="Proveedor o N° de comprobante">
+    <div class="d-flex align-items-center gap-2 small">
+        <span class="text-secondary">Desde</span>
+        <input type="date" name="desde" value="{{ desde }}" class="form-control form-control-sm" onchange="this.form.submit()">
+        <span class="text-secondary">hasta</span>
+        <input type="date" name="hasta" value="{{ hasta }}" class="form-control form-control-sm" onchange="this.form.submit()">
+    </div>
+    {% if hay_filtros %}<a href="{% url 'facturas_procesadas' %}" class="small">Limpiar filtros</a>{% endif %}
+</form>
+
+<div class="row g-4">
+    <!-- LISTA -->
+    <div class="col-lg-8">
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ cantidad }} factura{{ cantidad|pluralize }}</h5>
+                <strong>{{ total|moneda }}</strong>
+            </div>
+            {% for f in facturas %}
+            <div class="invoice-row">
+                <div class="invoice-icon"><i class="bi bi-receipt"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ f.deuda.descripcion }}</div>
+                    <div class="invoice-meta">
+                        <span class="chip-soft">{{ f.deuda.tipo_deuda }}</span>
+                        {{ f.proveedor }} · N° {{ f.nro_comprobante }} · {{ f.fecha|date:"d/m/Y" }}
+                        {% if not filtro_consorcio %} · <a href="{% url 'consorcio_facturas' f.consorcio_id %}" class="text-reset">{{ f.consorcio.name_consorcio }}</a>{% endif %}
+                        {% if f.deuda.contrato_id %} · <a href="{% url 'contrato_detalle' f.deuda.contrato_id %}">contrato</a>{% endif %}
+                    </div>
+                    <div class="small text-secondary">Cargada por {{ f.usuario.name_surname }}</div>
+                </div>
+                <div class="text-end">
+                    <div class="invoice-amount">{{ f.importe|moneda }}</div>
+                    {% if f.archivo %}<a href="{{ f.archivo|img_url }}" target="_blank" class="small"><i class="bi bi-paperclip"></i> Ver archivo</a>{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state small-state">
+                <i class="bi bi-receipt"></i>
+                <p>{% if hay_filtros %}No hay facturas con esos filtros.{% else %}Todavía no se cargaron facturas.{% endif %}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RESUMEN POR TIPO -->
+    <div class="col-lg-4">
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Gasto por tipo</h5></div>
+            {% for t in por_tipo %}
+            <div class="type-sum">
+                <div class="d-flex justify-content-between small">
+                    <span class="fw-semibold">{{ t.deuda__tipo_deuda__nombre }} <span class="text-secondary fw-normal">({{ t.cant }})</span></span>
+                    <span>{{ t.total|moneda }}</span>
+                </div>
+                <div class="progress mt-1" style="height: 6px;"><div class="progress-bar" style="width: {{ t.porcentaje }}%"></div></div>
+            </div>
+            {% empty %}
+            <p class="small text-secondary mb-0">Sin datos.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

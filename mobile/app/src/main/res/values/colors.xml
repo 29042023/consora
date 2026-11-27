@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Paleta CONSORA (tomada del logo) -->
+    <color name="consora_navy">#FF0D2A4F</color>
+    <color name="consora_teal">#FF14A3A3</color>
+    <color name="consora_teal_light">#FFD6F1F1</color>
+    <color name="consora_gray">#FF6B7280</color>
+    <color name="consora_divider">#FFE5E7EB</color>
+    <color name="consora_error">#FFC62828</color>
+    <color name="consora_chat_bg">#FFF3F5F7</color>
+    <color name="consora_pendiente">#FFB45309</color>
+    <color name="consora_pendiente_bg">#FFFEF3C7</color>
+    <color name="consora_oro_texto">#FF8A6A00</color>
+    <color name="consora_oro_bg">#FFFFF4D1</color>
+    <color name="consora_estrella">#FFF5B301</color>
+    <color name="consora_estrella_apagada">#FFD1D5DB</color>
+</resources>

@@ -1,0 +1,184 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+<a href="{% url 'contratos' %}{% if not usuario.rol.rol == 'Proveedor' %}?consorcio={{ contrato.consorcio_id }}{% endif %}" class="back-link mb-3 d-inline-block"><i class="bi bi-arrow-left"></i> Contratos</a>
+
+<div class="row g-4">
+
+    <div class="col-lg-7">
+
+        <!-- CABECERA -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <span class="contract-pay {{ contrato.forma_pago.tipo }}">
+                    {% if contrato.forma_pago.tipo == 'contado' %}<i class="bi bi-cash"></i>{% else %}<i class="bi bi-calendar3"></i>{% endif %}
+                    {{ contrato.forma_pago }}
+                </span>
+                <span class="contract-state {{ contrato.estado }}">{{ contrato.get_estado_display }}</span>
+            </div>
+            <h4 class="fw-bold mb-1">{{ contrato.descripcion }}</h4>
+            <div class="meet-when">
+                <span><i class="bi bi-person-workspace"></i> <a href="{% url 'proveedor_perfil' contrato.proveedor_id %}">{{ contrato.proveedor.name_surname }}</a></span>
+                <span><i class="bi bi-building"></i> {{ contrato.consorcio.name_consorcio }}</span>
+                <span><i class="bi bi-cash-stack"></i> {{ contrato.precio|moneda }}</span>
+            </div>
+            {% if contrato.propuesta %}
+            <div class="small text-secondary mt-2">
+                <i class="bi bi-check2-square"></i> Surgió de la votación
+                <a href="{% url 'votacion_detalle' contrato.propuesta.votacion_id %}">{{ contrato.propuesta.votacion.detalle|truncatechars:70 }}</a>
+            </div>
+            {% endif %}
+
+            <div class="contract-progress mt-3">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="fw-semibold">{{ contrato.cant_pagas }} de {{ contrato.cant_cuotas }} pago{{ contrato.cant_cuotas|pluralize }} hecho{{ contrato.cant_pagas|pluralize }}</span>
+                    <span>{{ contrato.porcentaje }} %</span>
+                </div>
+                <div class="progress" style="height: 8px;"><div class="progress-bar {% if contrato.estado == 'finalizado' %}bg-success{% endif %}" style="width: {{ contrato.porcentaje }}%"></div></div>
+            </div>
+        </div>
+
+        <!-- CUOTAS -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">{% if contrato.cant_cuotas == 1 %}Pago{% else %}Cuotas{% endif %}</h5>
+                {% if puede_pagar and contrato.estado == 'vigente' %}
+                <a href="{% url 'consorcio_facturas' contrato.consorcio_id %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-receipt me-1"></i> Pagar en Facturación</a>
+                {% endif %}
+            </div>
+
+            {% for c in cuotas %}
+            <div class="invoice-row">
+                <div class="invoice-icon {% if not c.factura_pago %}pending{% endif %}">
+                    {% if c.factura_pago %}<i class="bi bi-check2"></i>{% else %}<i class="bi bi-hourglass-split"></i>{% endif %}
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{% if contrato.cant_cuotas == 1 and c.nro_cuota == 1 %}Pago único{% else %}Cuota {{ c.nro_cuota }}{% endif %}</div>
+                    <div class="invoice-meta">
+                        {% if c.factura_pago %}
+                        <span class="text-success fw-semibold">Pagada el {{ c.factura_pago.fecha|date:"d/m/Y" }}</span> · N° {{ c.factura_pago.nro_comprobante }}
+                        {% if c.factura_pago.archivo %} · <a href="{{ c.factura_pago.archivo|img_url }}" target="_blank"><i class="bi bi-paperclip"></i> Factura</a>{% endif %}
+                        {% else %}
+                        <span class="{% if c.vencimiento < hoy %}text-danger fw-semibold{% endif %}">Vence {{ c.vencimiento|date:"d/m/Y" }}{% if c.vencimiento < hoy %} (vencida){% endif %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="invoice-amount">{{ c.importe|moneda }}</div>
+            </div>
+            {% empty %}
+            <div class="empty-state small-state">
+                <i class="bi bi-x-circle"></i>
+                <p>El contrato se canceló sin pagos.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <!-- RESUMEN -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Resumen</h5></div>
+            <div class="contract-sum"><span>Precio total</span><strong>{{ contrato.precio|moneda }}</strong></div>
+            <div class="contract-sum"><span>Pagado</span><strong class="text-success">{{ contrato.pagado|moneda }}</strong></div>
+            <div class="contract-sum"><span>Saldo</span><strong>{{ contrato.saldo|moneda }}</strong></div>
+            {% if contrato.proxima and contrato.estado == 'vigente' %}
+            <div class="contract-sum"><span>Próximo vencimiento</span><strong class="{% if contrato.proxima.vencimiento < hoy %}text-danger{% endif %}">{{ contrato.proxima.vencimiento|date:"d/m/Y" }}</strong></div>
+            {% endif %}
+            {% if contrato.creado_por %}
+            <div class="small text-secondary mt-2">Cargado por {{ contrato.creado_por.name_surname }}</div>
+            {% endif %}
+        </div>
+
+        <!-- CONTRATO FORMAL (PDF) -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Contrato formal</h5></div>
+            {% if contrato.contrato_pdf %}
+            <a href="{{ contrato.contrato_pdf|img_url }}" target="_blank" rel="noopener" class="contract-pdf">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+                <span class="min-w-0">
+                    <span class="d-block fw-semibold text-truncate">{{ contrato.nombre_pdf }}</span>
+                    <small class="text-secondary">Abrir PDF</small>
+                </span>
+            </a>
+            {% else %}
+            <p class="small text-secondary mb-2">{% if gestiona %}Todavía no se cargó el contrato firmado.{% else %}El administrador todavía no cargó el contrato firmado.{% endif %}</p>
+            {% endif %}
+            {% if gestiona %}
+            <form method="post" enctype="multipart/form-data" class="mt-2">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="subir_pdf">
+                <div class="input-group input-group-sm">
+                    <input type="file" name="contrato_pdf" class="form-control" accept="application/pdf,.pdf" required>
+                    <button type="submit" class="btn btn-outline-primary">{% if contrato.contrato_pdf %}Reemplazar{% else %}Subir{% endif %}</button>
+                </div>
+            </form>
+            {% if contrato.contrato_pdf %}
+            <form method="post" class="mt-2">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="quitar_pdf">
+                <button type="submit" class="btn btn-link btn-sm p-0 text-danger" onclick="return confirm('¿Quitar el PDF del contrato?')"><i class="bi bi-trash"></i> Quitar PDF</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- TRABAJO: en proceso o terminado (independiente de los pagos) -->
+        {% if contrato.estado != 'cancelado' %}
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Trabajo</h5></div>
+            {% if contrato.trabajo_terminado %}
+            <p class="mb-2"><span class="text-success fw-semibold"><i class="bi bi-check2-circle"></i> Terminado el {{ contrato.trabajo_terminado_en|date:"d/m/Y" }}</span></p>
+            {% if gestiona %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="reabrir_trabajo">
+                <button type="submit" class="btn btn-link btn-sm p-0 text-secondary"><i class="bi bi-arrow-counterclockwise"></i> Volver a en proceso</button>
+            </form>
+            {% endif %}
+            {% else %}
+            <p class="mb-2"><span class="text-warning-emphasis fw-semibold"><i class="bi bi-tools"></i> En proceso</span></p>
+            {% if gestiona or es_el_proveedor %}
+            <form method="post" class="d-flex gap-2 align-items-center">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="terminar_trabajo">
+                <input type="date" name="fecha" class="form-control form-control-sm" value="{{ hoy|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}" style="max-width: 160px;">
+                <button type="submit" class="btn btn-success btn-sm text-nowrap"><i class="bi bi-check2"></i> Marcar terminado</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if gestiona %}
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Acciones</h5></div>
+            {% if contrato.estado == 'vigente' %}
+            <form method="post" class="mb-2">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="cancelar">
+                <button type="submit" class="btn btn-outline-warning btn-sm w-100"
+                        onclick="return confirm('¿Cancelar el contrato? Las cuotas sin pagar dejan de ser deuda.')">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar contrato
+                </button>
+            </form>
+            {% endif %}
+            {% if contrato.cant_pagas == 0 %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="eliminar">
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                        onclick="return confirm('¿Eliminar el contrato y sus cuotas?')">
+                    <i class="bi bi-trash me-1"></i> Eliminar
+                </button>
+            </form>
+            {% else %}
+            <p class="small text-secondary mb-0">Tiene pagos hechos: no se puede eliminar, solo cancelar.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

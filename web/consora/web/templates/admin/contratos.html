@@ -1,0 +1,208 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load static consora_tags l10n %}
+
+{% block content %}
+
+{% if consorcio_filtrado %}
+<a href="{% url 'consorcios' %}" class="back-link mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Consorcios</a>
+{% include 'admin/_consorcio_tabs.html' with c=consorcio_filtrado activa='contratos' %}
+{% endif %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>{% if consorcio_filtrado %}Contratos de {{ consorcio_filtrado.name_consorcio }}{% elif es_proveedor %}Mis contratos{% else %}Contratos con proveedores{% endif %}</h2>
+        <p>{% if es_proveedor %}Trabajos que te contrataron y cómo se te van pagando.{% else %}Cada cuota se paga desde Facturación, cargándole su factura.{% endif %}</p>
+    </div>
+    {% if puede_gestionar %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#contratoModal">
+        <i class="bi bi-file-earmark-plus me-1"></i> Nuevo contrato
+    </button>
+    {% endif %}
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    {% if mis_consorcios %}
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los consorcios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    <div class="vote-chips">
+        <button type="submit" name="estado" value="" class="vote-chip{% if not filtro_estado %} active{% endif %}">Todos</button>
+        {% for valor, texto in estados %}
+        <button type="submit" name="estado" value="{{ valor }}" class="vote-chip{% if filtro_estado == valor %} active{% endif %}">{{ texto }}s</button>
+        {% endfor %}
+    </div>
+</form>
+
+<!-- LISTA -->
+<div class="row g-3">
+    {% for c in contratos %}
+    <div class="col-md-6 col-xl-4">
+        <a href="{% url 'contrato_detalle' c.id_contrato_proveedor %}" class="vote-card">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <span class="contract-pay {{ c.forma_pago.tipo }}">
+                    {% if c.forma_pago.tipo == 'contado' %}<i class="bi bi-cash"></i>{% else %}<i class="bi bi-calendar3"></i>{% endif %}
+                    {{ c.forma_pago }}
+                </span>
+                <span class="contract-state {{ c.estado }}">{{ c.get_estado_display }}</span>
+            </div>
+            <p class="vote-detail mb-1">{{ c.descripcion }}{% if c.contrato_pdf %} <i class="bi bi-file-earmark-pdf text-danger" title="Tiene el contrato formal en PDF"></i>{% endif %}</p>
+            <div class="vote-meta mb-2">
+                {% if es_proveedor %}
+                <span><i class="bi bi-building"></i> {{ c.consorcio.name_consorcio }}</span>
+                {% else %}
+                <span><i class="bi bi-person-workspace"></i> {{ c.proveedor.name_surname }}</span>
+                {% if not consorcio_filtrado %}<span><i class="bi bi-building"></i> {{ c.consorcio.name_consorcio }}</span>{% endif %}
+                {% endif %}
+            </div>
+            <div class="contract-progress">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="fw-semibold">{{ c.cant_pagas }} de {{ c.cant_cuotas }} pago{{ c.cant_cuotas|pluralize }}</span>
+                    <span class="text-secondary">{{ c.pagado|moneda }} de {{ c.precio|moneda }}</span>
+                </div>
+                <div class="progress" style="height: 6px;"><div class="progress-bar {% if c.estado == 'finalizado' %}bg-success{% endif %}" style="width: {{ c.porcentaje }}%"></div></div>
+            </div>
+            <div class="vote-foot">
+                {% if c.estado == 'vigente' and c.proxima %}
+                <span class="{% if c.proxima.vencimiento < hoy %}text-danger fw-semibold{% endif %}">
+                    <i class="bi bi-hourglass-split"></i> Próximo pago {{ c.proxima.importe|moneda }} · vence {{ c.proxima.vencimiento|date:"d/m/Y" }}
+                </span>
+                {% elif c.estado == 'finalizado' %}
+                <span class="text-success fw-semibold"><i class="bi bi-check-circle-fill"></i> Pagado completo</span>
+                {% else %}
+                <span><i class="bi bi-x-circle"></i> Cancelado</span>
+                {% endif %}
+            </div>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="empty-state">
+            <i class="bi bi-file-earmark-text"></i>
+            <h5>No hay contratos</h5>
+            <p>{% if puede_gestionar %}Cargá uno con "Nuevo contrato" o desde una votación de contratación cerrada.{% elif es_proveedor %}Cuando un consorcio te contrate, lo vas a ver acá.{% else %}Cuando se contrate a un proveedor, lo vas a ver acá.{% endif %}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+{% if puede_gestionar %}
+<!-- MODAL: NUEVO CONTRATO -->
+<div class="modal fade" id="contratoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nuevo contrato</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {% if propuesta %}
+                <!-- Viene de una votación de contratación: consorcio y proveedor ya están definidos -->
+                <input type="hidden" name="id_propuesta" value="{{ propuesta.pk }}">
+                <div class="vote-winner mb-3">
+                    <i class="bi bi-award-fill"></i> <strong>{{ propuesta.proveedor.name_surname }}</strong> en {{ propuesta.votacion.consorcio.name_consorcio }}
+                    <div class="small mt-1">Ganó la votación: {{ propuesta.votacion.detalle|truncatechars:90 }}</div>
+                </div>
+                {% else %}
+                <label class="form-label small fw-semibold">Consorcio</label>
+                <div class="mb-3">
+                    <select name="id_consorcio" class="form-select selector-rico" data-buscar="Buscar edificio o dirección" required>
+                        {% for c in gestionables %}
+                        <option value="{{ c.id_consorcio }}" data-img="{{ c.img_consorcio|img_url }}" data-iniciales="{{ c.name_consorcio|slice:':2'|upper }}"
+                                data-sub="{{ c.direccion }}{% if c.descripcion %} · {{ c.descripcion|truncatechars:40 }}{% endif %}"
+                                {% if consorcio_filtrado.id_consorcio == c.id_consorcio or not consorcio_filtrado and forloop.first %}selected{% endif %}>{{ c.name_consorcio }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <label class="form-label small fw-semibold">Proveedor</label>
+                <div class="mb-3">
+                    <select name="id_proveedor" class="form-select selector-rico" data-forma="redonda" data-buscar="Buscar proveedor o rubro" required>
+                        <option value="">Elegí el proveedor</option>
+                        {% for p in proveedores %}
+                        <option value="{{ p.id_user }}" data-img="{{ p.img|img_url }}" data-iniciales="{{ p.iniciales }}"
+                                data-sub="{{ p.info|truncatechars:70 }}" data-extra="{{ p.estrellas }}">{{ p.name_surname }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <label class="form-label small fw-semibold">Trabajo contratado</label>
+                <input type="text" name="descripcion" class="form-control mb-3" maxlength="200"
+                       value="{% if propuesta %}{{ propuesta.votacion.detalle|truncatechars:120 }}{% endif %}" placeholder="Ej.: Impermeabilización de la terraza" required>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Precio total</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="precio" id="contratoPrecio" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Primer pago</label>
+                        <input type="date" name="fecha" class="form-control" value="{{ hoy|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+
+                <label class="form-label small fw-semibold">Forma de pago</label>
+                <div class="pay-picker mb-2">
+                    {% for f in formas_pago %}
+                    <label>
+                        <input type="radio" name="id_forma_pago" value="{{ f.pk }}" data-cuotas="{{ f.cuotas }}" {% if forloop.first %}checked{% endif %}>
+                        <span>{% if f.tipo == 'contado' %}Contado{% else %}{{ f.cuotas }} cuotas{% endif %}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="small text-secondary mb-3" id="contratoResumen"></div>
+
+                <label class="form-label small fw-semibold">Contrato formal (PDF, opcional)</label>
+                <input type="file" name="contrato_pdf" class="form-control" accept="application/pdf,.pdf">
+                <div class="form-text">El contrato firmado con el proveedor. También lo podés subir después, desde el detalle.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Crear contrato</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+
+{% block js %}
+{% if puede_gestionar %}
+<script src="{% static 'js/selector_rico.js' %}?v=1"></script>
+<script>
+    // Muestra cuánto queda cada cuota y que van a Facturación
+    (function () {
+        const precio = document.getElementById('contratoPrecio');
+        const resumen = document.getElementById('contratoResumen');
+        const formato = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' });
+        function actualizar() {
+            const elegida = document.querySelector('input[name="id_forma_pago"]:checked');
+            const cuotas = elegida ? parseInt(elegida.dataset.cuotas, 10) : 1;
+            const total = parseFloat(precio.value);
+            if (!total || total <= 0) { resumen.textContent = 'Cada pago queda en Facturación como deuda pendiente.'; return; }
+            resumen.textContent = cuotas === 1
+                ? `Un solo pago de ${formato.format(total)}, que queda en Facturación como deuda pendiente.`
+                : `${cuotas} cuotas mensuales de ${formato.format(Math.floor(total / cuotas * 100) / 100)}, que quedan en Facturación como deudas pendientes.`;
+        }
+        precio.addEventListener('input', actualizar);
+        document.querySelectorAll('input[name="id_forma_pago"]').forEach(r => r.addEventListener('change', actualizar));
+        actualizar();
+        {% if propuesta %}new bootstrap.Modal(document.getElementById('contratoModal')).show();{% endif %}
+    })();
+</script>
+{% endif %}
+{% endblock %}

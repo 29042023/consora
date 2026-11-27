@@ -1,0 +1,145 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load static consora_tags %}
+
+{% block content %}
+
+<!-- MÉTRICAS -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-envelope-open"></i></div>
+            <div><p class="metric-value">{{ invitaciones_por_responder }}</p><small class="metric-label">Invitaciones por responder</small></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-icon bg-success-subtle text-success"><i class="bi bi-award"></i></div>
+            <div><p class="metric-value">{{ contratos }}</p><small class="metric-label">Contrataciones ganadas</small></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-images"></i></div>
+            <div><p class="metric-value">{{ publicaciones }}</p><small class="metric-label">Trabajos publicados</small></div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="metric-card">
+            <div class="metric-icon bg-warning-subtle text-warning"><i class="bi bi-star-fill"></i></div>
+            <div><p class="metric-value">{{ promedio|default:"—" }}</p><small class="metric-label">{{ cant_resenas }} reseña{{ cant_resenas|pluralize }}</small></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-lg-7">
+        <!-- INVITACIONES PENDIENTES: se responden desde el chat con el administrador -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Invitaciones a contrataciones</h5></div>
+            {% for inv in pendientes %}
+            <div class="invoice-row">
+                <div class="invoice-icon pending"><i class="bi bi-envelope"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ inv.votacion.detalle|truncatechars:70 }}</div>
+                    <div class="invoice-meta">{{ inv.votacion.consorcio.name_consorcio }} · cierra {{ inv.votacion.fecha_limite|date:"d/m H:i" }}</div>
+                </div>
+                {% if inv.chat_id %}
+                <a href="{% url 'chat' %}?chat_id={{ inv.chat_id }}" class="btn btn-primary btn-sm">Responder</a>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="empty-state small-state"><i class="bi bi-envelope-check"></i><p>No tenés invitaciones por responder.</p></div>
+            {% endfor %}
+        </div>
+
+        <!-- REUNIONES: invitaciones (se responden desde el chat) y las que ya aceptó -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Reuniones</h5></div>
+            {% for p in reuniones_pendientes %}
+            <div class="invoice-row">
+                <div class="invoice-icon pending"><img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo lg"></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ p.reunion.titulo }}</div>
+                    <div class="invoice-meta">{{ p.reunion.consorcio.name_consorcio }} · {{ p.reunion.fecha_inicio|date:"d/m H:i" }} · te invitaron</div>
+                </div>
+                {% if p.chat_id %}<a href="{% url 'chat' %}?chat_id={{ p.chat_id }}" class="btn btn-primary btn-sm">Responder</a>{% endif %}
+            </div>
+            {% endfor %}
+            {% for p in reuniones_confirmadas %}
+            <div class="invoice-row">
+                <div class="invoice-icon"><img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo lg"></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ p.reunion.titulo }}</div>
+                    <div class="invoice-meta">{{ p.reunion.consorcio.name_consorcio }} · {{ p.reunion.fecha_inicio|date:"d/m H:i" }} · <span class="text-success fw-semibold">Confirmada</span></div>
+                </div>
+                {% if p.reunion.meet_link %}<a href="{{ p.reunion.meet_link }}" target="_blank" rel="noopener" class="btn btn-success btn-sm">Unirme</a>
+                {% else %}<a href="{% url 'reunion_detalle' p.reunion_id %}" class="btn btn-outline-primary btn-sm">Ver</a>{% endif %}
+            </div>
+            {% endfor %}
+            {% if not reuniones_pendientes and not reuniones_confirmadas %}
+            <p class="text-secondary small mb-0">Cuando un administrador te invite a una reunión, la vas a ver acá.</p>
+            {% endif %}
+        </div>
+
+        <!-- VOTACIONES EN LAS QUE PARTICIPA -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Mis propuestas</h5></div>
+            {% for inv in participando %}
+            <div class="invoice-row">
+                <div class="invoice-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ inv.votacion.detalle|truncatechars:70 }}</div>
+                    <div class="invoice-meta">
+                        {{ inv.votacion.consorcio.name_consorcio }} ·
+                        {% if inv.contratado %}<span class="text-success fw-semibold">🏆 Te contrataron</span>
+                        {% elif inv.votacion.abierta %}<span class="text-primary fw-semibold">En votación hasta {{ inv.votacion.fecha_limite|date:"d/m" }}</span>
+                        {% else %}<span class="text-secondary">Votación cerrada</span>{% endif %}
+                    </div>
+                </div>
+                {% if inv.propuesta_pdf %}<a href="{{ inv.propuesta_pdf|img_url }}" target="_blank" class="btn btn-outline-primary btn-sm">Ver PDF</a>{% endif %}
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">Cuando aceptes una invitación, la vas a ver acá.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <!-- PERFIL DEL MARKETPLACE -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="account-head">
+                {% if usuario.img %}<img src="{{ usuario.img|img_url }}" alt="" class="account-avatar">
+                {% else %}<div class="account-avatar">{{ usuario.iniciales }}</div>{% endif %}
+                <div>
+                    <h5 class="mb-0">{{ usuario.name_surname }}</h5>
+                    <span class="chip-soft">Proveedor</span>
+                </div>
+            </div>
+            {% if cuenta.descripcion %}<p class="small" style="white-space:pre-line;">{{ cuenta.descripcion|truncatechars:220 }}</p>{% endif %}
+            <a href="{% url 'proveedor_perfil' usuario.id_user %}" class="btn btn-primary btn-sm w-100">
+                <i class="bi bi-person-badge me-1"></i> Ver mi perfil y publicar trabajos
+            </a>
+        </div>
+
+        <!-- ÚLTIMAS RESEÑAS -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Últimas reseñas</h5></div>
+            {% for r in resenas %}
+            <div class="review-item">
+                <div class="review-avatar">{{ r.autor.iniciales }}</div>
+                <div class="flex-grow-1">
+                    <strong class="small">{{ r.autor.name_surname }}</strong>
+                    <div class="review-stars">{% for n in "12345" %}<i class="bi bi-star-fill{% if forloop.counter > r.estrellas %} off{% endif %}"></i>{% endfor %}</div>
+                    {% if r.descripcion %}<p class="small mb-0">{{ r.descripcion }}</p>{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">Todavía no tenés reseñas.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

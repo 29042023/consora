@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpetas que la app comparte (solo para abrir archivos con otra app: visor de PDF, galería...) -->
+<paths>
+    <files-path name="archivos" path="." />
+    <cache-path name="cache" path="abrir/" />
+</paths>

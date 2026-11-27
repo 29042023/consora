@@ -1,0 +1,260 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+<a href="{% url 'votaciones' %}?consorcio={{ votacion.consorcio_id }}" class="back-link mb-3 d-inline-block"><i class="bi bi-arrow-left"></i> Votaciones de {{ votacion.consorcio.name_consorcio }}</a>
+
+<div class="row g-4">
+
+    <div class="col-lg-7">
+
+        <!-- CABECERA -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <span class="vote-type {{ votacion.tipo }}">
+                    {% if votacion.tipo == 'contratacion' %}<i class="bi bi-briefcase"></i>{% else %}<i class="bi bi-people"></i>{% endif %}
+                    {{ votacion.get_tipo_display }}
+                </span>
+                {% if votacion.abierta and not votacion.lanzada %}
+                <span class="vote-state waiting"><i class="bi bi-hourglass-split"></i> Esperando que los proveedores acepten · cierra el {{ votacion.fecha_limite|date:"d/m/Y H:i" }}</span>
+                {% elif votacion.abierta %}
+                <span class="vote-state open"><i class="bi bi-circle-fill"></i> Abierta hasta el {{ votacion.fecha_limite|date:"d/m/Y H:i" }}</span>
+                {% else %}
+                <span class="vote-state closed">Cerró el {{ votacion.fecha_limite|date:"d/m/Y H:i" }}</span>
+                {% endif %}
+            </div>
+            <p class="vote-detail-full">{{ votacion.detalle }}</p>
+            <small class="text-secondary">Creada el {{ votacion.fecha|date:"d/m/Y H:i" }} · {{ votacion.consorcio.name_consorcio }}</small>
+
+            {% if contratado %}
+            <div class="vote-winner mt-3 d-flex flex-wrap align-items-center gap-2">
+                <span><i class="bi bi-award-fill"></i> Se contrató a <strong>{{ contratado.proveedor.name_surname }}</strong></span>
+                {% if contrato %}
+                <a href="{% url 'contrato_detalle' contrato.pk %}" class="ms-auto small fw-semibold"><i class="bi bi-file-earmark-text"></i> Ver contrato y cuotas</a>
+                {% elif gestiona %}
+                <a href="{% url 'contratos' %}?propuesta={{ contratado.pk }}" class="btn btn-success btn-sm ms-auto"><i class="bi bi-file-earmark-plus"></i> Cargar contrato</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- PROVEEDORES INVITADOS (solo contratación): la invitación les llega por chat -->
+        {% if votacion.tipo == 'contratacion' %}
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">Proveedores invitados</h5>
+                {% if gestiona and votacion.abierta and proveedores %}
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#invitarModal">
+                    <i class="bi bi-send me-1"></i> Invitar otro
+                </button>
+                {% endif %}
+            </div>
+
+            {% for inv in invitaciones %}
+            <div class="proposal-row{% if inv.contratado %} accepted{% endif %}">
+                <div class="proposal-avatar">
+                    {% if inv.proveedor.img %}<img src="{{ inv.proveedor.img|img_url }}" alt="" width="42" height="42">
+                    {% else %}{{ inv.proveedor.iniciales }}{% endif %}
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="fw-bold">
+                        <a href="{% url 'proveedor_perfil' inv.proveedor_id %}" class="text-reset text-decoration-none">{{ inv.proveedor.name_surname }}</a>
+                        {% if inv.contratado %}<span class="badge text-bg-success ms-1">Contratado</span>{% endif %}
+                    </div>
+                    <div class="small">
+                        {% if inv.aceptacion %}<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill"></i> Aceptó participar</span>
+                        {% elif inv.aceptacion is False %}<span class="text-danger fw-semibold"><i class="bi bi-x-circle-fill"></i> Rechazó</span>
+                        {% else %}<span class="text-warning-emphasis fw-semibold"><i class="bi bi-hourglass-split"></i> Esperando respuesta</span>{% endif %}
+                        {% if inv.propuesta_pdf %} · <a href="{{ inv.propuesta_pdf|img_url }}" target="_blank"><i class="bi bi-file-earmark-pdf text-danger"></i> Ver propuesta</a>{% endif %}
+                        · <a href="{% url 'chat_con' inv.proveedor_id %}"><i class="bi bi-chat-dots"></i> Chat</a>
+                    </div>
+                </div>
+                {% if gestiona and not votacion.abierta and inv.aceptacion and not inv.contratado %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="contratar">
+                    <input type="hidden" name="id_propuesta" value="{{ inv.pk }}">
+                    <button type="submit" class="btn btn-outline-success btn-sm" onclick="return confirm('¿Contratar a {{ inv.proveedor.name_surname|escapejs }}?')">Contratar</button>
+                </form>
+                {% endif %}
+                {% if gestiona and votacion.abierta and inv.aceptacion is None %}
+                <form method="post" onsubmit="return confirm('¿Cancelar la invitación?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cancelar_invitacion">
+                    <input type="hidden" name="id_propuesta" value="{{ inv.pk }}">
+                    <button type="submit" class="btn-icon-soft" title="Cancelar invitación"><i class="bi bi-x-lg"></i></button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="empty-state small-state">
+                <i class="bi bi-send"></i>
+                <p>Invitá proveedores: la votación se lanza cuando alguno acepte.</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- VOTAR -->
+        {% if votacion.abierta and not votacion.lanzada %}
+        <div class="vote-waiting mb-4">
+            <i class="bi bi-hourglass-split"></i>
+            <div><strong>La votación todavía no se lanzó.</strong><br>
+            Se lanza cuando algún proveedor acepte la invitación desde el chat. Ahí los propietarios van a poder votar.</div>
+        </div>
+        {% elif votacion.abierta and puedo_votar %}
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">{% if mi_voto %}Cambiar mi voto{% else %}Votar{% endif %}</h5></div>
+            {% if resultados %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="votar">
+                <div class="vote-options">
+                    {% for r in resultados %}
+                    <label class="vote-option">
+                        <input type="radio" name="voto" value="{{ r.valor }}" {% if mi_voto == r.valor %}checked{% endif %} required>
+                        <span>{{ r.texto }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm px-4 mt-3">{% if mi_voto %}Cambiar voto{% else %}Votar{% endif %}</button>
+            </form>
+            {% else %}
+            <p class="text-secondary small mb-0">Cuando haya propuestas vas a poder votar.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- DOCUMENTOS (doc_votacion): los que se cargaron al crearla y los que se suban después -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Documentos</h5></div>
+            {% for d in documentos %}
+            <div class="invoice-row">
+                <div class="invoice-icon">
+                    {% if d.extension == '.pdf' %}<i class="bi bi-file-earmark-pdf text-danger"></i>
+                    {% elif d.extension in '.doc .docx' %}<i class="bi bi-file-earmark-word"></i>
+                    {% elif d.extension in '.xls .xlsx .csv' %}<i class="bi bi-file-earmark-excel text-success"></i>
+                    {% else %}<i class="bi bi-file-earmark-image"></i>{% endif %}
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <a href="{{ d.doc|img_url }}" target="_blank" class="invoice-title text-decoration-none">{{ d.nombre }}</a>
+                    <div class="invoice-meta">{{ d.extension|cut:"."|upper }}</div>
+                </div>
+                {% if gestiona %}
+                <form method="post" onsubmit="return confirm('¿Eliminar este documento?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="borrar_doc">
+                    <input type="hidden" name="id_doc" value="{{ d.pk }}">
+                    <button type="submit" class="btn-icon-soft" title="Eliminar"><i class="bi bi-trash"></i></button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}
+            <p class="text-secondary small">Sin documentos{% if gestiona %}. Podés subir presupuestos, planos, fotos o el acta con el resultado{% endif %}.</p>
+            {% endfor %}
+            {% if gestiona %}
+            <form method="post" enctype="multipart/form-data" class="d-flex gap-2 mt-2">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="subir_doc">
+                <input type="file" name="doc" class="form-control form-control-sm" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,image/*" required>
+                <button type="submit" class="btn btn-outline-primary btn-sm text-nowrap"><i class="bi bi-upload me-1"></i> Subir</button>
+            </form>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="col-lg-5">
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Resultados</h5></div>
+
+            {% for r in resultados %}
+            <div class="result-row">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="fw-semibold">{% if r.gana and not votacion.abierta %}<i class="bi bi-trophy-fill text-warning"></i> {% endif %}{{ r.texto }}</span>
+                    <span class="text-secondary">{{ r.cantidad }} · {{ r.porcentaje }}%</span>
+                </div>
+                <div class="result-bar"><div class="result-bar-fill{% if r.gana %} lead{% endif %}" style="width: {{ r.porcentaje }}%"></div></div>
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">Sin opciones todavía.</p>
+            {% endfor %}
+
+            <div class="vote-participation">
+                <i class="bi bi-people"></i>
+                Votaron <strong>{{ participacion.votos }}</strong> de {{ participacion.habilitados }} ({{ participacion.porcentaje }}%)
+            </div>
+        </div>
+
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Votos</h5></div>
+            {% for v in votos %}
+            <div class="data-row">
+                <span>{{ v.usuario.name_surname }}</span>
+                <span>
+                    {% if votacion.tipo == 'contratacion' %}
+                    {% for r in resultados %}{% if r.valor == v.voto %}{{ r.texto }}{% endif %}{% endfor %}
+                    {% else %}{% if v.voto == 'si' %}Sí{% elif v.voto == 'no' %}No{% else %}Abstención{% endif %}{% endif %}
+                </span>
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">Todavía nadie votó.</p>
+            {% endfor %}
+        </div>
+
+        {% if gestiona %}
+        <div class="d-flex gap-2">
+            {% if votacion.abierta %}
+            <form method="post" class="flex-grow-1" onsubmit="return confirm('¿Cerrar la votación ahora? Ya no se va a poder votar.')">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="cerrar">
+                <button type="submit" class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-lock me-1"></i> Cerrar ahora</button>
+            </form>
+            {% endif %}
+            <form method="post" class="flex-grow-1" onsubmit="return confirm('¿Eliminar la votación con sus votos y documentos?')">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="eliminar">
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-trash me-1"></i> Eliminar</button>
+            </form>
+        </div>
+        {% elif not puedo_votar %}
+        <!-- Asistente: ve la votación de los consorcios que tiene habilitados, pero no vota -->
+        <div class="vote-waiting"><i class="bi bi-eye"></i><div>Ves esta votación porque tenés habilitado este consorcio. Votan los propietarios y el administrador.</div></div>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+{% if votacion.tipo == 'contratacion' and votacion.abierta %}
+<!-- MODAL: INVITAR OTRO PROVEEDOR (le llega por chat) -->
+<div class="modal fade" id="invitarModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="invitar">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Invitar proveedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary">Le va a llegar una invitación por chat para aceptar o rechazar participar.</p>
+                <select name="id_proveedor" class="form-select" required>
+                    <option value="">Elegí el proveedor</option>
+                    {% for p in proveedores %}<option value="{{ p.id_user }}">{{ p.name_surname }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-send me-1"></i> Enviar invitación</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

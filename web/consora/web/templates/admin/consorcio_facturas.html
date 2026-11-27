@@ -1,0 +1,153 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags l10n %}
+
+{% block content %}
+
+<a href="{% url 'consorcios' %}" class="back-link mb-2 d-inline-block"><i class="bi bi-arrow-left"></i> Consorcios</a>
+<!-- Actividades del consorcio -->
+{% include 'admin/_consorcio_tabs.html' with c=consorcio activa='facturas' %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <h2 class="mb-0">Facturación</h2>
+    {% if puede_cargar %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#facturaModal"
+            {% if not pendientes %}disabled title="No hay deudas pendientes"{% endif %}>
+        <i class="bi bi-plus-lg me-1"></i> Cargar factura
+    </button>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+
+    <!-- FACTURAS CARGADAS -->
+    <div class="col-lg-7">
+        <div class="panel-card">
+            <div class="panel-card-header"><h5 class="mb-0">Facturas</h5></div>
+
+            {% for f in facturas %}
+            <div class="invoice-row">
+                <div class="invoice-icon"><i class="bi bi-receipt"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ f.deuda.descripcion }}</div>
+                    <div class="invoice-meta">
+                        <span class="chip-soft">{{ f.deuda.tipo_deuda }}</span>
+                        {{ f.proveedor }} · N° {{ f.nro_comprobante }} · {{ f.fecha|date:"d/m/Y" }}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="invoice-amount">{{ f.importe|moneda }}</div>
+                    {% if f.archivo %}
+                    <a href="{{ f.archivo|img_url }}" target="_blank" class="small"><i class="bi bi-paperclip"></i> Ver archivo</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state small-state">
+                <i class="bi bi-receipt"></i>
+                <p>Todavía no se cargaron facturas de este consorcio.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- DEUDAS PENDIENTES -->
+    <div class="col-lg-5">
+        <div class="panel-card">
+            <div class="panel-card-header"><h5 class="mb-0">Deudas pendientes</h5></div>
+
+            {% for d in pendientes %}
+            <div class="invoice-row">
+                <div class="invoice-icon pending"><i class="bi bi-hourglass-split"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ d.descripcion }}</div>
+                    <div class="invoice-meta">
+                        <span class="chip-soft">{{ d.tipo_deuda }}</span>
+                        {% if d.proveedor %}{{ d.proveedor }} · {% endif %}
+                        {% if d.contrato_id %}<a href="{% url 'contrato_detalle' d.contrato_id %}">contrato</a> · {% endif %}
+                        {% if d.vencimiento %}
+                        <span class="{% if d.vencimiento < hoy %}text-danger{% endif %}">vence {{ d.vencimiento|date:"d/m" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="invoice-amount">{{ d.importe|moneda }}</div>
+            </div>
+            {% empty %}
+            <div class="empty-state small-state">
+                <i class="bi bi-check2-circle"></i>
+                <p>No hay deudas pendientes.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+<!-- MODAL: CARGAR FACTURA -->
+<div class="modal fade" id="facturaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Cargar factura</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Deuda</label>
+                <select name="id_deuda" class="form-select mb-3" id="facturaDeuda" required>
+                    <option value="">Elegí la deuda a la que corresponde</option>
+                    {% for d in pendientes %}
+                    <option value="{{ d.id_deuda }}" data-proveedor="{{ d.proveedor|default:'' }}" data-importe="{{ d.importe|unlocalize }}">
+                        {{ d.tipo_deuda }} · {{ d.descripcion }} ({{ d.importe|moneda }})
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Proveedor</label>
+                        <input type="text" name="proveedor" class="form-control" id="facturaProveedor" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">N° de comprobante</label>
+                        <input type="text" name="nro_comprobante" class="form-control" placeholder="0001-00001234" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Fecha</label>
+                        <input type="date" name="fecha" class="form-control" value="{{ hoy|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Importe</label>
+                        <input type="number" name="importe" class="form-control" step="0.01" min="0.01" id="facturaImporte" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Archivo (PDF o imagen)</label>
+                        <input type="file" name="archivo" class="form-control" accept="application/pdf,image/*">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block js %}
+<script>
+    // Al elegir la deuda se completan proveedor e importe, si están vacíos (como en la app)
+    document.getElementById('facturaDeuda').addEventListener('change', function () {
+        const opcion = this.selectedOptions[0];
+        const proveedor = document.getElementById('facturaProveedor');
+        const importe = document.getElementById('facturaImporte');
+        if (!proveedor.value) proveedor.value = opcion.dataset.proveedor || '';
+        if (!importe.value) importe.value = opcion.dataset.importe || '';
+    });
+</script>
+{% endblock %}

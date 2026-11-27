@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Por ahora la app usa siempre el tema claro (el logo tiene fondo blanco).
+         Cuando se diseñe el modo oscuro, personalizar aquí. -->
+    <style name="Base.Theme.Consora_mobile" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/consora_navy</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/consora_teal</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/consora_teal_light</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+    </style>
+</resources>

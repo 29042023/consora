@@ -1,0 +1,78 @@
+{% load consora_tags %}
+<header class="admin-topbar">
+
+    <button type="button" class="sidebar-toggle" id="sidebarToggle">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <div class="topbar-title flex-grow-1">
+        <h4>{{ page_title|default:"Dashboard" }}</h4>
+        <small>{{ page_subtitle|default:"Resumen general de tus consorcios" }}</small>
+    </div>
+
+    {% if usuario.rol.rol == 'Administrador/a' or usuario.rol.rol == 'Administrador del sistema' %}
+    <select class="form-select building-select" id="buildingFilter">
+        <option value="todos">Todos los edificios</option>
+        <option value="palmas">Edificio Las Palmas</option>
+        <option value="sol">Torres del Sol</option>
+        <option value="belgrano">Edificio Belgrano</option>
+    </select>
+    {% endif %}
+
+    {% mensajes_sin_leer usuario as sin_leer %}
+    <a href="{% url 'chat' %}" class="topbar-icon-btn{% if request.resolver_match.url_name == 'chat' %} active{% endif %}"
+       title="Mensajes" data-estado-url="{% url 'chat_estado' %}" id="chatTopbarBtn">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span class="badge-count" id="chatBadge"{% if not sin_leer %} hidden{% endif %}>{% if sin_leer > 99 %}99+{% else %}{{ sin_leer }}{% endif %}</span>
+    </a>
+    <script>
+    // Mantiene al día el globito de mensajes sin leer en cualquier pantalla del panel
+    (function () {
+        const btn = document.getElementById('chatTopbarBtn');
+        const badge = document.getElementById('chatBadge');
+        if (!btn || !badge) return;
+        async function actualizar() {
+            if (document.hidden) return;
+            try {
+                const resp = await fetch(btn.dataset.estadoUrl, { credentials: 'same-origin', cache: 'no-store' });
+                if (!resp.ok) return;
+                const n = (await resp.json()).sin_leer || 0;
+                badge.textContent = n > 99 ? '99+' : n;
+                badge.hidden = n === 0;
+            } catch (e) { /* se reintenta en la próxima vuelta */ }
+        }
+        setInterval(actualizar, 5000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) actualizar(); });
+    })();
+    </script>
+
+    <button type="button" class="topbar-icon-btn">
+        <i class="bi bi-bell"></i>
+        <span class="badge-dot"></span>
+    </button>
+
+    <div class="dropdown">
+        <div class="user-chip" data-bs-toggle="dropdown">
+            {% if usuario.img %}
+            <img src="{{ usuario.img|img_url }}" alt="" class="user-avatar" style="object-fit:cover;">
+            {% else %}
+            <div class="user-avatar">{{ usuario.iniciales }}</div>
+            {% endif %}
+            <div class="d-none d-md-block">
+                <div style="font-weight:600; font-size:0.88rem;">{{ usuario.name_surname }}</div>
+                <small class="text-secondary">{{ usuario.mail }}</small>
+            </div>
+        </div>
+
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="{% url 'cuenta' %}">Mi cuenta</a></li>
+            {% if usuario.cuenta_marketplace %}
+            <li><a class="dropdown-item" href="{% url 'proveedor_perfil' usuario.id_user %}">Mi perfil del Marketplace</a></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="#">Configuración</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar sesión</a></li>
+        </ul>
+    </div>
+
+</header>

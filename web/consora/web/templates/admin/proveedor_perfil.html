@@ -1,0 +1,255 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+<div class="ig-profile">
+
+    {% if es_propio and usuario.administrador %}
+    <a href="{% url 'cuenta' %}" class="back-link mb-3 d-inline-block"><i class="bi bi-arrow-left"></i> Mi cuenta</a>
+    {% else %}
+    <a href="{% url 'marketplace' %}" class="back-link mb-3 d-inline-block"><i class="bi bi-arrow-left"></i> Marketplace</a>
+    {% endif %}
+
+    <!-- CABECERA (como un perfil de Instagram) -->
+    <header class="ig-head">
+        <div class="ig-avatar-wrap">
+            {% if dueno.img %}
+            <img src="{{ dueno.img|img_url }}" alt="" class="ig-avatar">
+            {% else %}
+            <div class="ig-avatar">{{ dueno.iniciales }}</div>
+            {% endif %}
+        </div>
+
+        <div class="ig-info">
+            <div class="ig-name-row">
+                <h2 class="ig-name">{{ dueno.name_surname }}</h2>
+                {% if promedio %}<span class="ig-verified" title="Calificación promedio"><i class="bi bi-star-fill"></i> {{ promedio }}</span>{% endif %}
+            </div>
+            <div class="ig-category">{{ dueno.rol }}</div>
+
+            <!-- Trabajos = publicaciones; reseñas y calificación abren la pestaña de reseñas -->
+            <ul class="ig-stats">
+                <li><strong>{{ publicaciones|length }}</strong> trabajo{{ publicaciones|length|pluralize }}</li>
+                <li><a href="#" data-ig-tab="resenas"><strong>{{ resenas|length }}</strong> reseña{{ resenas|length|pluralize }}</a></li>
+                <li><a href="#" data-ig-tab="resenas"><strong>{{ promedio|default:"—" }}</strong> calificación</a></li>
+            </ul>
+
+            {% if cuenta.descripcion %}<p class="ig-bio">{{ cuenta.descripcion }}</p>{% endif %}
+            {% if cuenta.link %}
+            <!-- Link sin "https://www.", como en Instagram -->
+            <a href="{{ cuenta.link }}" target="_blank" rel="noopener" class="ig-link">
+                <i class="bi bi-link-45deg"></i> {{ cuenta.link|cut:"https://"|cut:"http://"|cut:"www." }}
+            </a>
+            {% endif %}
+            {% if not cuenta %}<p class="ig-bio text-secondary">Este usuario todavía no tiene perfil en el Marketplace.</p>{% endif %}
+
+            <!-- "X, Y y N más lo reseñaron" con los avatares de los primeros -->
+            {% if resenas %}
+            <div class="ig-followed">
+                <div class="ig-followed-avatars">
+                    {% for r in resenas|slice:":3" %}
+                    {% if r.autor.img %}
+                    <img src="{{ r.autor.img|img_url }}" alt="">
+                    {% else %}
+                    <span>{{ r.autor.iniciales }}</span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <span>
+                    {% for r in resenas|slice:":2" %}<strong>{{ r.autor.name_surname }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% if resenas|length > 2 %} y {{ resenas|length|add:"-2" }} más{% endif %}
+                    {% if resenas|length == 1 %}lo reseñó{% else %}lo reseñaron{% endif %}
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- BOTONES -->
+    {% if cuenta %}
+    <div class="ig-actions">
+        {% if es_propio %}
+        <button type="button" class="ig-btn" data-bs-toggle="modal" data-bs-target="#publicarModal">
+            <i class="bi bi-plus-square me-1"></i> Nueva publicación
+        </button>
+        <button type="button" class="ig-btn" data-ig-tab="resenas">Ver reseñas</button>
+        {% else %}
+        <a href="{% url 'chat_con' dueno.id_user %}" class="ig-btn primary">Mensaje</a>
+        <button type="button" class="ig-btn" data-bs-toggle="modal" data-bs-target="#resenaModal">
+            {% if mi_resena %}Editar mi reseña{% else %}Dejar reseña{% endif %}
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- PESTAÑAS: publicaciones / reseñas -->
+    <nav class="ig-tabs">
+        <button type="button" class="active" data-ig-tab="publicaciones" title="Publicaciones"><i class="bi bi-grid-3x3"></i><span>Publicaciones</span></button>
+        <button type="button" data-ig-tab="resenas" title="Reseñas"><i class="bi bi-star"></i><span>Reseñas</span></button>
+    </nav>
+
+    <!-- GRILLA: 3 columnas; el dueño ve primero un cuadro para agregar una nueva -->
+    <section class="ig-panel" id="ig-publicaciones">
+        <div class="ig-grid">
+            {% if es_propio %}
+            <button type="button" class="ig-cell add" data-bs-toggle="modal" data-bs-target="#publicarModal">
+                <i class="bi bi-plus-lg"></i>
+                <span>Nueva publicación</span>
+            </button>
+            {% endif %}
+
+            {% for p in publicaciones %}
+            <div class="ig-cell" data-bs-toggle="modal" data-bs-target="#pub{{ p.id_img_cuentas_marketplace }}">
+                <img src="{{ p.img|img_url }}" alt="">
+                <div class="ig-cell-hover">
+                    {% if p.descripcion %}<span>{{ p.descripcion|truncatechars:70 }}</span>{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            {% if not es_propio %}
+            <div class="ig-empty">
+                <div class="ig-empty-icon"><i class="bi bi-camera"></i></div>
+                <h5>Todavía no hay publicaciones</h5>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- RESEÑAS -->
+    <section class="ig-panel d-none" id="ig-resenas">
+        {% for r in resenas %}
+        <div class="review-item">
+            <div class="review-avatar">{{ r.autor.iniciales }}</div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between">
+                    <strong class="small">{{ r.autor.name_surname }}</strong>
+                    <small class="text-secondary">{{ r.creation|date:"d/m/Y" }}</small>
+                </div>
+                <div class="review-stars">
+                    {% for n in "12345" %}<i class="bi bi-star-fill{% if forloop.counter > r.estrellas %} off{% endif %}"></i>{% endfor %}
+                </div>
+                {% if r.descripcion %}<p class="small mb-0">{{ r.descripcion }}</p>{% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="ig-empty">
+            <div class="ig-empty-icon"><i class="bi bi-star"></i></div>
+            <h5>Todavía no tiene reseñas</h5>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+
+<!-- MODAL: CADA PUBLICACIÓN (foto a la izquierda, texto a la derecha) -->
+{% for p in publicaciones %}
+<div class="modal fade" id="pub{{ p.id_img_cuentas_marketplace }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content overflow-hidden ig-post">
+            <div class="ig-post-img"><img src="{{ p.img|img_url }}" alt=""></div>
+            <div class="ig-post-side">
+                <div class="ig-post-head">
+                    {% if dueno.img %}<img src="{{ dueno.img|img_url }}" alt="" class="ig-post-avatar">
+                    {% else %}<span class="ig-post-avatar">{{ dueno.iniciales }}</span>{% endif %}
+                    <strong class="flex-grow-1">{{ dueno.name_surname }}</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="ig-post-body">
+                    {% if p.descripcion %}<p>{{ p.descripcion }}</p>{% endif %}
+                    <small class="text-secondary">{{ p.creation|date:"j \d\e F \d\e Y" }}</small>
+                </div>
+                {% if es_propio %}
+                <form method="post" class="ig-post-foot" onsubmit="return confirm('¿Eliminar esta publicación?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="borrar_publicacion">
+                    <input type="hidden" name="id_publicacion" value="{{ p.id_img_cuentas_marketplace }}">
+                    <button type="submit" class="btn btn-link text-danger btn-sm text-decoration-none p-0">
+                        <i class="bi bi-trash me-1"></i> Eliminar publicación
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- MODAL: ESCRIBIR (O EDITAR) LA RESEÑA; el dueño no puede reseñarse -->
+{% if cuenta and not es_propio %}
+<div class="modal fade" id="resenaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="resena">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">{% if mi_resena %}Editá tu reseña{% else %}Dejá tu reseña{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="star-picker">
+                    {% for n in "54321" %}
+                    <input type="radio" name="estrellas" value="{{ n }}" id="star{{ n }}" {% if mi_resena.estrellas|stringformat:"s" == n %}checked{% endif %} required>
+                    <label for="star{{ n }}" title="{{ n }} estrellas"><i class="bi bi-star-fill"></i></label>
+                    {% endfor %}
+                </div>
+                <textarea name="descripcion" class="form-control mt-2" rows="3" placeholder="Contá cómo fue el trabajo (opcional)">{{ mi_resena.descripcion|default:"" }}</textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Guardar reseña</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- MODAL: NUEVA PUBLICACIÓN (solo el dueño) -->
+{% if es_propio and cuenta %}
+<div class="modal fade" id="publicarModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" enctype="multipart/form-data" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="publicar">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nueva publicación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Foto</label>
+                <input type="file" name="foto" class="form-control mb-3" accept="image/*" required>
+                <label class="form-label small fw-semibold">Texto (opcional)</label>
+                <textarea name="descripcion" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Publicar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+
+{% block js %}
+<script>
+    // Pestañas Publicaciones / Reseñas (también las abren los contadores y "Ver reseñas")
+    function mostrarPestana(nombre) {
+        document.querySelectorAll('.ig-panel').forEach(p => p.classList.toggle('d-none', p.id !== 'ig-' + nombre));
+        document.querySelectorAll('.ig-tabs button').forEach(b => b.classList.toggle('active', b.dataset.igTab === nombre));
+    }
+    document.querySelectorAll('[data-ig-tab]').forEach(el => el.addEventListener('click', e => {
+        e.preventDefault();
+        mostrarPestana(el.dataset.igTab);
+        if (!el.closest('.ig-tabs')) document.querySelector('.ig-tabs').scrollIntoView({behavior: 'smooth'});
+    }));
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'layouts/users/admin/base.html' %}
+
+{% block content %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>Próximos eventos</h2>
+        <p>Visitas técnicas, asambleas y vencimientos de tus consorcios.</p>
+    </div>
+    {% if puede_agendar %}
+    <button type="button" class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#eventoModal">
+        <i class="bi bi-plus-lg me-1"></i> Nuevo evento
+    </button>
+    {% endif %}
+</div>
+
+<div class="agenda-list">
+    {% for dia in dias %}
+    <!-- Se agrega un título cada vez que cambia el día -->
+    <div class="agenda-day">
+        {% if dia.fecha == hoy %}Hoy{% elif dia.fecha == manana %}Mañana{% else %}{{ dia.fecha|date:"l j \d\e F"|capfirst }}{% endif %}
+    </div>
+
+    {% for e in dia.eventos %}
+    <div class="agenda-event">
+        <div class="agenda-time">
+            {% if e.hora %}{{ e.hora|time:"H:i" }}{% else %}<i class="bi bi-calendar-event"></i>{% endif %}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+            <div class="invoice-title">{{ e.titulo }}</div>
+            <div class="invoice-meta">
+                {% if e.consorcio %}<span class="chip-soft"><i class="bi bi-building"></i> {{ e.consorcio.name_consorcio }}</span>{% endif %}
+                {{ e.descripcion|default:"" }}
+            </div>
+        </div>
+        {% if puede_agendar and e.usuario_id == usuario.id_user %}
+        <form method="post" onsubmit="return confirm('¿Eliminar este evento?')">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="eliminar">
+            <input type="hidden" name="id_evento" value="{{ e.id_evento }}">
+            <button type="submit" class="btn-icon-soft" title="Eliminar"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% empty %}
+    <div class="empty-state">
+        <i class="bi bi-calendar-event"></i>
+        <h5>No tenés eventos próximos</h5>
+        <p>Agendá visitas, reuniones o vencimientos con "Nuevo evento".</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+
+{% block modals %}
+<!-- MODAL: NUEVO EVENTO -->
+<div class="modal fade" id="eventoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nuevo evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label small fw-semibold">Título</label>
+                <input type="text" name="titulo" class="form-control mb-3" placeholder="Ej. Visita técnica ascensor" required>
+
+                <label class="form-label small fw-semibold">Descripción</label>
+                <textarea name="descripcion" class="form-control mb-3" rows="2"></textarea>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Fecha</label>
+                        <!-- Solo fechas de hoy en adelante -->
+                        <input type="date" name="fecha" class="form-control" min="{{ hoy|date:'Y-m-d' }}" value="{{ hoy|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Hora (opcional)</label>
+                        <input type="time" name="hora" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Consorcio (opcional)</label>
+                        <select name="id_consorcio" class="form-select">
+                            <option value="">Ninguno</option>
+                            {% for c in mis_consorcios %}
+                            <option value="{{ c.id_consorcio }}">{{ c.name_consorcio }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary btn-sm px-3">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

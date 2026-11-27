@@ -1,0 +1,143 @@
+{% load static %}
+<aside class="admin-sidebar" id="adminSidebar">
+
+    <a href="{% url 'index' %}" class="sidebar-brand">
+        <img src="{% static 'img/logo.png' %}" alt="Consora">
+        <span>Consora</span>
+    </a>
+
+    <nav class="sidebar-nav">
+
+        {% if usuario.rol.rol == 'Proveedor' or usuario.rol.rol == 'Asistente' or usuario.rol.rol == 'Propietario/Residente' %}
+        <!-- Asistentes, proveedores y propietarios tienen su propio menú -->
+        {% include 'layouts/users/admin/menu_roles.html' %}
+        {% else %}
+
+        <div class="nav-group">
+            <div class="nav-group-label">MOVIMIENTOS</div>
+
+            <a href="{% url 'dashboard' %}" class="sidebar-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
+                <i class="bi bi-grid-1x2"></i>
+                Dashboard
+            </a>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-file-earmark-bar-graph"></i>
+                Resumen
+            </a>
+
+            <a href="{% url 'historial_consorcios' %}" class="sidebar-link{% if request.resolver_match.url_name == 'historial_consorcios' %} active{% endif %}">
+                <i class="bi bi-clock-history"></i>
+                Historial
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">SOLICITUDES</div>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-list-check"></i>
+                Todas las solicitudes
+            </a>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-plus-circle"></i>
+                Nueva solicitud
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">PROVEEDORES</div>
+
+            <a href="{% url 'marketplace' %}" class="sidebar-link{% if request.resolver_match.url_name == 'marketplace' %} active{% endif %}">
+                <i class="bi bi-shop"></i>
+                Marketplace
+            </a>
+
+            <a href="{% url 'contratos' %}" class="sidebar-link{% if request.resolver_match.url_name == 'contratos' or request.resolver_match.url_name == 'contrato_detalle' %} active{% endif %}">
+                <i class="bi bi-file-earmark-text"></i>
+                Contratos y cuotas
+            </a>
+
+            <a href="{% url 'trabajos' %}" class="sidebar-link{% if request.resolver_match.url_name == 'trabajos' %} active{% endif %}">
+                <i class="bi bi-clipboard-check"></i>
+                Trabajos en proceso y terminados
+            </a>
+
+            <a href="{% url 'facturas_procesadas' %}" class="sidebar-link{% if request.resolver_match.url_name == 'facturas_procesadas' %} active{% endif %}">
+                <i class="bi bi-receipt"></i>
+                Facturas procesadas
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">CONSORCIOS</div>
+
+            <a href="{% url 'consorcios' %}" class="sidebar-link{% if request.resolver_match.url_name == 'consorcios' %} active{% endif %}">
+                <i class="bi bi-buildings"></i>
+                Edificios
+            </a>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-people"></i>
+                Propietarios y residentes
+            </a>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-folder2-open"></i>
+                Documentación
+            </a>
+
+            <a href="{% url 'agenda' %}" class="sidebar-link{% if request.resolver_match.url_name == 'agenda' %} active{% endif %}">
+                <i class="bi bi-calendar-event"></i>
+                Actividades
+            </a>
+
+            <a href="{% url 'votaciones' %}" class="sidebar-link{% if request.resolver_match.url_name == 'votaciones' or request.resolver_match.url_name == 'votacion_detalle' %} active{% endif %}">
+                <i class="bi bi-check2-square"></i>
+                Votaciones
+            </a>
+
+            <a href="{% url 'reuniones' %}" class="sidebar-link{% if request.resolver_match.url_name == 'reuniones' or request.resolver_match.url_name == 'reunion_detalle' %} active{% endif %}">
+                <i class="bi bi-camera-video"></i>
+                Reuniones
+            </a>
+
+            <a href="{% url 'marketplace_consorcios' %}" class="sidebar-link{% if request.resolver_match.url_name == 'marketplace_consorcios' %} active{% endif %}">
+                <i class="bi bi-shop"></i>
+                Marketplace
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">EQUIPO</div>
+
+            <a href="{% url 'asistentes' %}" class="sidebar-link{% if request.resolver_match.url_name == 'asistentes' %} active{% endif %}">
+                <i class="bi bi-person-badge"></i>
+                Asistentes
+            </a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">COMUNICACIÓN</div>
+
+            <a href="{% url 'chat' %}" class="sidebar-link{% if request.resolver_match.url_name == 'chat' %} active{% endif %}">
+                <i class="bi bi-chat-dots"></i>
+                Chat
+            </a>
+
+            <a href="#" class="sidebar-link">
+                <i class="bi bi-bell"></i>
+                Notificaciones
+            </a>
+        </div>
+
+        {% endif %}
+
+    </nav>
+
+    <div class="sidebar-footer">
+        © 2026 Consora
+    </div>
+
+</aside>

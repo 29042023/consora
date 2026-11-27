@@ -1,0 +1,97 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load consora_tags %}
+
+{% block content %}
+
+<div class="page-header-row d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div>
+        <h2>Trabajos en proceso y terminados</h2>
+        <p>Cada trabajo sale de un contrato con un proveedor. Se marca terminado aparte de cómo se va pagando.</p>
+    </div>
+    {% if usuario.rol.rol != 'Proveedor' %}
+    <a href="{% url 'contratos' %}" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-file-earmark-text me-1"></i> Contratos y cuotas</a>
+    {% endif %}
+</div>
+
+<!-- FILTROS -->
+<form method="get" class="vote-filters">
+    <input type="hidden" name="vista" value="{{ vista }}">
+    {% if mis_consorcios %}
+    <select name="consorcio" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Todos los consorcios</option>
+        {% for c in mis_consorcios %}
+        <option value="{{ c.id_consorcio }}" {% if filtro_consorcio == c.id_consorcio|stringformat:'s' %}selected{% endif %}>{{ c.name_consorcio }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    <input type="search" name="q" value="{{ busqueda }}" class="form-control form-control-sm" style="max-width: 260px;" placeholder="Buscar trabajo o proveedor">
+    <div class="vote-chips">
+        <a href="?vista=proceso&consorcio={{ filtro_consorcio }}&q={{ busqueda|urlencode }}" class="vote-chip text-decoration-none{% if vista != 'terminados' %} active{% endif %}">En proceso ({{ cant_proceso }})</a>
+        <a href="?vista=terminados&consorcio={{ filtro_consorcio }}&q={{ busqueda|urlencode }}" class="vote-chip text-decoration-none{% if vista == 'terminados' %} active{% endif %}">Terminados ({{ cant_terminados }})</a>
+    </div>
+</form>
+
+<div class="panel-card" style="height:auto;">
+    {% for t in trabajos %}
+    <div class="work-row">
+        <!-- Foto del proveedor (o del edificio, si mira el proveedor) con el estado del trabajo -->
+        {% if es_proveedor %}
+        <div class="work-avatar edificio">
+            {% if t.consorcio.img_consorcio %}<img src="{{ t.consorcio.img_consorcio|img_url }}" alt="">{% else %}<i class="bi bi-building"></i>{% endif %}
+            <span class="work-badge {% if t.trabajo_terminado %}ok{% endif %}">{% if t.trabajo_terminado %}<i class="bi bi-check"></i>{% else %}<i class="bi bi-tools"></i>{% endif %}</span>
+        </div>
+        {% else %}
+        <a href="{% url 'proveedor_perfil' t.proveedor_id %}" class="work-avatar" title="Ver perfil de {{ t.proveedor.name_surname }}">
+            {% if t.proveedor.img %}<img src="{{ t.proveedor.img|img_url }}" alt="">{% else %}{{ t.proveedor.iniciales }}{% endif %}
+            <span class="work-badge {% if t.trabajo_terminado %}ok{% endif %}">{% if t.trabajo_terminado %}<i class="bi bi-check"></i>{% else %}<i class="bi bi-tools"></i>{% endif %}</span>
+        </a>
+        {% endif %}
+        <div class="flex-grow-1 min-w-0">
+            <a href="{% url 'contrato_detalle' t.id_contrato_proveedor %}" class="history-text text-decoration-none">{{ t.descripcion }}</a>
+            <div class="invoice-meta">
+                {% if es_proveedor %}<span><i class="bi bi-building"></i> {{ t.consorcio.name_consorcio }}</span>
+                {% else %}<a href="{% url 'proveedor_perfil' t.proveedor_id %}" class="work-prov">{{ t.proveedor.name_surname }}</a> · <span>{{ t.consorcio.name_consorcio }}</span>{% endif %}
+                ·
+                {% if t.trabajo_terminado %}
+                <span class="text-success fw-semibold">Terminado el {{ t.trabajo_terminado_en|date:"d/m/Y" }}</span>
+                {% if t.dias >= 0 %}<span class="text-secondary">({{ t.dias }} día{{ t.dias|pluralize }})</span>{% endif %}
+                {% else %}
+                <span>Desde el {{ t.fecha|date:"d/m/Y" }}</span>
+                {% if t.dias >= 0 %}<span class="text-secondary">· hace {{ t.dias }} día{{ t.dias|pluralize }}</span>{% endif %}
+                {% endif %}
+            </div>
+            <!-- Pagos del contrato -->
+            <div class="work-pay">
+                <div class="progress" style="height: 5px;"><div class="progress-bar {% if t.estado == 'finalizado' %}bg-success{% endif %}" style="width: {{ t.porcentaje }}%"></div></div>
+                <span>
+                    {% if t.estado == 'finalizado' %}Pagado completo · {{ t.precio|moneda }}
+                    {% else %}{{ t.cant_pagas }} de {{ t.cant_cuotas }} pago{{ t.cant_cuotas|pluralize }} · {{ t.pagado|moneda }} de {{ t.precio|moneda }}{% endif %}
+                </span>
+            </div>
+        </div>
+        {% if t.gestiona %}
+        <form method="post" action="{% url 'contrato_detalle' t.id_contrato_proveedor %}">
+            {% csrf_token %}
+            <input type="hidden" name="volver" value="{{ request.get_full_path }}">
+            {% if t.trabajo_terminado %}
+            {% if not es_proveedor %}
+            <input type="hidden" name="accion" value="reabrir_trabajo">
+            <button type="submit" class="btn btn-link btn-sm text-secondary text-nowrap" title="Volver a en proceso"><i class="bi bi-arrow-counterclockwise"></i> Reabrir</button>
+            {% endif %}
+            {% else %}
+            <input type="hidden" name="accion" value="terminar_trabajo">
+            <button type="submit" class="btn btn-outline-success btn-sm text-nowrap"
+                    onclick="return confirm('¿Marcar el trabajo como terminado?')"><i class="bi bi-check2"></i> Terminado</button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state small-state">
+        <i class="bi bi-tools"></i>
+        <p>{% if vista == 'terminados' %}Todavía no hay trabajos terminados.{% else %}No hay trabajos en proceso.{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

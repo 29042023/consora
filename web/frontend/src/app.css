@@ -1,0 +1,10 @@
+/* Ajustes propios del front en React (el resto del diseño viene de los CSS de Django) */
+.app-cargando { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.app-sidebar-fondo { position: fixed; inset: 0; background: rgba(15, 23, 42, .35); z-index: 1035; }
+.sidebar-link { cursor: pointer; }
+.page-messages { position: sticky; top: 8px; z-index: 20; }
+.modal { background: transparent; }
+.app-tarjeta-link { cursor: pointer; }
+
+/* Chat dentro del contenido: ocupa el alto disponible, con bordes redondeados */
+.app-chat { height: calc(100vh - 150px); min-height: 420px; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; background: white; }

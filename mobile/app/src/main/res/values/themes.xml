@@ -1,0 +1,42 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Consora_mobile" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/consora_navy</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/consora_teal</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/consora_teal_light</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+    </style>
+
+    <style name="Theme.Consora_mobile" parent="Base.Theme.Consora_mobile" />
+
+    <!-- Tema de la pantalla de carga (en values-v31 se agrega el ícono de Android 12+) -->
+    <style name="Theme.Consora.Splash" parent="Theme.Consora_mobile">
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+
+    <!-- Indicador de la pestaña activa del menú inferior -->
+    <style name="ConsoraNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/consora_teal_light</item>
+    </style>
+
+    <!-- Forma circular para avatares (ShapeableImageView) -->
+    <style name="ConsoraCircle">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Título de las tarjetas de la pantalla de cuenta -->
+    <style name="ConsoraCardTitle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:textColor">@color/consora_teal</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+</resources>

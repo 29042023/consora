@@ -1,0 +1,93 @@
+/* ===== BUSCADOR + FILTRO ===== */
+.market-search-row {
+    display: flex; align-items: center; gap: 10px;
+    max-width: 760px; margin: 0 auto 24px;
+}
+.market-search {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    background: white; border: 1px solid #e5e7eb; border-radius: 999px; padding: 10px 18px;
+    transition: .15s ease;
+}
+.market-search:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.market-search i { color: #9ca3af; }
+.market-search input { flex: 1; border: none; outline: none; background: transparent; font-size: .92rem; color: var(--text); }
+.market-filter-btn {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%;
+    border: 1px solid #e5e7eb; background: white; color: var(--text);
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: .15s ease;
+}
+.market-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+/* ===== GRILLA ===== */
+.market-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    border-radius: 14px; overflow: hidden;
+}
+
+/* ===== TARJETA ===== */
+.market-tile {
+    position: relative; aspect-ratio: 3 / 4; overflow: hidden;
+    display: block; color: white; text-decoration: none;
+}
+.market-tile:hover { color: white; }
+
+/* Ícono grande de fondo (hace de "imagen" hasta tener fotos reales) */
+.market-tile-bg-icon {
+    position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%);
+    font-size: 5.5rem; opacity: .35; transition: transform .3s ease;
+}
+.market-tile:hover .market-tile-bg-icon { transform: translate(-50%, -50%) scale(1.08); }
+
+.market-tile-type { position: absolute; top: 12px; right: 12px; font-size: 1.15rem; text-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.market-tile-rubro {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(0,0,0,.28); backdrop-filter: blur(4px);
+    padding: 3px 10px; border-radius: 999px; font-size: .72rem; font-weight: 600;
+}
+
+.market-tile-info {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 14px 14px;
+    background: linear-gradient(to top, rgba(0,0,0,.6), transparent);
+}
+.market-tile-text { font-size: .85rem; font-weight: 600; line-height: 1.3; margin: 0 0 8px; }
+.market-tile-provider { display: flex; align-items: center; gap: 8px; font-size: .78rem; opacity: .9; }
+.market-tile-avatar {
+    width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700;
+}
+
+.market-tile-hover {
+    position: absolute; inset: 0; background: rgba(17,24,39,.55);
+    display: flex; align-items: center; justify-content: center; gap: 22px;
+    font-weight: 700; font-size: 1rem; opacity: 0; transition: opacity .2s ease;
+}
+.market-tile-hover i { margin-right: 4px; }
+.market-tile:hover .market-tile-hover { opacity: 1; }
+
+/* Foto real de la publicación (tapa el degradado) */
+.market-tile-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Iniciales del proveedor cuando no tiene fotos */
+.market-tile-initials { font-size: 4.5rem; font-weight: 800; letter-spacing: .02em; }
+img.market-tile-avatar { object-fit: cover; }
+
+.market-empty { grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: #6b7280; background: white; }
+.market-empty i { font-size: 2.4rem; color: #cbd5e1; }
+
+/* ===== COLORES POR RUBRO ===== */
+.tema-amber  { background: linear-gradient(150deg, #f59e0b, #b45309); }
+.tema-slate  { background: linear-gradient(150deg, #64748b, #1e293b); }
+.tema-rose   { background: linear-gradient(150deg, #fb7185, #be123c); }
+.tema-sky    { background: linear-gradient(150deg, #38bdf8, #0369a1); }
+.tema-blue   { background: linear-gradient(150deg, #3b82f6, #1e3a8a); }
+.tema-teal   { background: linear-gradient(150deg, #2dd4bf, #0f766e); }
+.tema-indigo { background: linear-gradient(150deg, #818cf8, #3730a3); }
+.tema-green  { background: linear-gradient(150deg, #4ade80, #15803d); }
+.tema-red    { background: linear-gradient(150deg, #f87171, #991b1b); }
+.tema-cyan   { background: linear-gradient(150deg, #22d3ee, #0e7490); }
+.tema-orange { background: linear-gradient(150deg, #fb923c, #c2410c); }
+.tema-lime   { background: linear-gradient(150deg, #a3e635, #4d7c0f); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) { .market-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { .market-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px)  { .market-tile-bg-icon { font-size: 4rem; } }

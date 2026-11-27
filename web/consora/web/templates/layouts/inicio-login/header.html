@@ -1,0 +1,47 @@
+{% load static %}
+<header class="site-header sticky-top">
+    <nav class="navbar navbar-expand-lg login-navbar">
+        <div class="container">
+            <!-- Marca: ícono + nombre (el logo completo tiene el texto muy chico para el header) -->
+            <a class="navbar-brand brand-consora" href="{% url 'index' %}">
+                <img src="{% static 'img/logos/logo_icono.png' %}" alt="" class="logo-navbar">
+                <span class="brand-text">CON<span>SORA</span></span>
+            </a>
+
+            <button
+                class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarNavLogin"
+                aria-controls="navbarNavLogin"
+                aria-expanded="false"
+                aria-label="Abrir navegación"
+            >
+                <i class="bi bi-list"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNavLogin">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#inicio">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#funcionalidades">Funcionalidades</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#como-funciona">Cómo funciona</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#actores">Para quién</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#proveedores">Proveedores</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#planes">Planes</a></li>
+                </ul>
+
+                <div class="nav-actions">
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary{% if request.resolver_match.url_name == 'login' %} active{% endif %}">
+                        Login
+                    </a>
+                    {% if request.resolver_match.url_name == 'login' %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal">Registrarme</button>
+                    {% else %}
+                    <!-- Desde la landing lleva al login con el formulario de registro abierto -->
+                    <a href="{% url 'login' %}?registro=1" class="btn btn-primary">Registrarme</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>

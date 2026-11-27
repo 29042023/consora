@@ -1,0 +1,140 @@
+{% extends 'layouts/users/admin/base.html' %}
+{% load static consora_tags %}
+
+{% block content %}
+
+<!-- MÉTRICAS -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="metric-card">
+            <div class="metric-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-list-check"></i></div>
+            <div><p class="metric-value">{{ en_proceso }}</p><small class="metric-label">Tareas en proceso</small></div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="metric-card">
+            <div class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-buildings"></i></div>
+            <div><p class="metric-value">{{ consorcios|length }}</p><small class="metric-label">Edificios habilitados</small></div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="metric-card">
+            <div class="metric-icon bg-success-subtle text-success"><i class="bi bi-check2-square"></i></div>
+            <div><p class="metric-value">{{ votaciones_abiertas|length }}</p><small class="metric-label">Votaciones abiertas</small></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-lg-7">
+        <!-- MIS TAREAS: tocando se marcan como completadas -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">Mis tareas</h5>
+                {% if asistente %}
+                <a href="{% url 'chat_con' asistente.admin.id_user %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-chat-dots me-1"></i> Escribirle a mi administrador
+                </a>
+                {% endif %}
+            </div>
+            <div class="task-list">
+                {% for tarea in tareas %}
+                <div class="task-item{% if tarea.completada %} done{% endif %}">
+                    <form method="post" class="flex-grow-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="cambiar_tarea">
+                        <input type="hidden" name="id_tarea" value="{{ tarea.id_tarea }}">
+                        <button type="submit" class="task-toggle" title="{% if tarea.completada %}Volver a en proceso{% else %}Marcar como completada{% endif %}">
+                            <i class="bi {% if tarea.completada %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i>
+                            <span>{{ tarea.descripcion }}</span>
+                        </button>
+                    </form>
+                    <small class="text-secondary text-nowrap">{{ tarea.created_at|date:"d/m" }}</small>
+                </div>
+                {% empty %}
+                <div class="empty-state small-state"><i class="bi bi-check2-all"></i><p>No tenés tareas asignadas.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- EDIFICIOS HABILITADOS -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Edificios habilitados</h5></div>
+            {% for c in consorcios %}
+            <div class="invoice-row">
+                <div class="proposal-avatar" style="background:#2563eb;">
+                    {% if c.img_consorcio %}<img src="{{ c.img_consorcio|img_url }}" alt="" width="42" height="42">{% else %}<i class="bi bi-building"></i>{% endif %}
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ c.name_consorcio }}</div>
+                    <div class="invoice-meta">{{ c.direccion }}{% if c.cant_pendientes %} · <span class="text-warning-emphasis">{{ c.cant_pendientes }} deuda{{ c.cant_pendientes|pluralize }} pendiente{{ c.cant_pendientes|pluralize }}</span>{% endif %}</div>
+                </div>
+                <a href="{% url 'consorcio_facturas' c.id_consorcio %}" class="btn btn-outline-primary btn-sm">Facturación</a>
+                <a href="{% url 'votaciones' %}?consorcio={{ c.id_consorcio }}" class="btn btn-outline-primary btn-sm">Votaciones</a>
+            </div>
+            {% empty %}
+            <div class="empty-state small-state"><i class="bi bi-buildings"></i><p>Tu administrador todavía no te habilitó edificios.</p></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <!-- PRÓXIMAS REUNIONES -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">Próximas reuniones</h5>
+                <a href="{% url 'reuniones' %}" class="small">Ver todas</a>
+            </div>
+            {% for r in reuniones %}
+            <a href="{% url 'reunion_detalle' r.id_reunion %}" class="invoice-row text-decoration-none">
+                <div class="invoice-icon">{% if r.es_virtual %}<img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo lg">{% else %}<i class="bi bi-geo-alt"></i>{% endif %}</div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ r.titulo }}</div>
+                    <div class="invoice-meta">{{ r.consorcio.name_consorcio }} · {{ r.fecha_inicio|date:"d/m H:i" }}{% if r.estado_actual == 'en_curso' %} · <span class="text-success fw-semibold">En curso</span>{% endif %}</div>
+                </div>
+            </a>
+            {% empty %}
+            <p class="text-secondary small mb-0">No hay reuniones programadas.</p>
+            {% endfor %}
+        </div>
+
+        <!-- VOTACIONES DE SUS EDIFICIOS (solo lectura) -->
+        <div class="panel-card mb-4" style="height:auto;">
+            <div class="panel-card-header"><h5 class="mb-0">Votaciones abiertas</h5></div>
+            {% for v in votaciones_abiertas %}
+            <a href="{% url 'votacion_detalle' v.id_votacion %}" class="invoice-row text-decoration-none">
+                <div class="invoice-icon"><i class="bi {% if v.tipo == 'contratacion' %}bi-briefcase{% else %}bi-people{% endif %}"></i></div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ v.detalle|truncatechars:60 }}</div>
+                    <div class="invoice-meta">{{ v.consorcio.name_consorcio }} · cierra {{ v.fecha_limite|date:"d/m H:i" }}</div>
+                </div>
+            </a>
+            {% empty %}
+            <p class="text-secondary small mb-0">No hay votaciones abiertas en tus edificios.</p>
+            {% endfor %}
+        </div>
+
+        <!-- PRÓXIMOS EVENTOS -->
+        <div class="panel-card" style="height:auto;">
+            <div class="panel-card-header d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">Próximos eventos</h5>
+                <a href="{% url 'agenda' %}" class="small">Ver agenda</a>
+            </div>
+            {% for e in eventos %}
+            <div class="invoice-row">
+                <div class="agenda-time">{{ e.fecha|date:"d/m" }}</div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="invoice-title">{{ e.titulo }}</div>
+                    <div class="invoice-meta">{% if e.hora %}{{ e.hora|time:"H:i" }} · {% endif %}{{ e.consorcio.name_consorcio|default:"" }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-secondary small mb-0">No hay eventos próximos.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

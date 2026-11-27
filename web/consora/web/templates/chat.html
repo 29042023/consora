@@ -1,0 +1,309 @@
+{% load static consora_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Consora | Chat</title>
+
+    <!-- Bootstrap -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+    <!-- CSS propio -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=3">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}?v=6">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+</head>
+
+<body>
+
+<div class="admin-shell">
+
+    <!-- SIDEBAR -->
+    {% include 'layouts/users/admin/menu.html' %}
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- MAIN -->
+    <div class="admin-main">
+
+        {% include 'layouts/users/admin/header.html' %}
+
+        <!-- CHAT -->
+        <!-- chat-open: en celular se muestra la conversación elegida en vez de la lista -->
+        <div class="chat-shell{% if request.GET.chat_id and chat_activo %} chat-open{% endif %}" data-estado-url="{% url 'chat_estado' %}">
+
+            <!-- LISTA DE CONVERSACIONES -->
+            <div class="chat-list-panel">
+
+                <div class="chat-list-search">
+                    <div class="input-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" placeholder="Buscar conversación...">
+                    </div>
+                </div>
+
+                <div class="chat-filters">
+                    <span class="chat-filter-chip active">Todos</span>
+                    <span class="chat-filter-chip">Propietarios</span>
+                    <span class="chat-filter-chip">Proveedores</span>
+                    <span class="chat-filter-chip">Equipo</span>
+                </div>
+
+                <div class="chat-list-scroll">
+
+                    {% for conv in conversaciones %}
+                    <a
+                        href="?chat_id={{ conv.chat.id_chat }}"
+                        class="chat-list-item{% if chat_activo and conv.chat.id_chat == chat_activo.id_chat %} selected{% endif %}{% if conv.sin_leer %} unread{% endif %}"
+                    >
+                        <div class="chat-list-avatar
+                            {% if conv.otro_usuario.rol.rol == 'Propietario/Residente' %} bg-propietario
+                            {% elif conv.otro_usuario.rol.rol == 'Proveedor' %} bg-proveedor
+                            {% elif conv.otro_usuario.rol.rol == 'Asistente' %} bg-asistente
+                            {% else %} bg-admin
+                            {% endif %}">
+                            {% if conv.otro_usuario.img %}
+                            <img src="{{ conv.otro_usuario.img|img_url }}" alt="" width="42" height="42">
+                            {% else %}
+                            {{ conv.otro_usuario.iniciales }}
+                            {% endif %}
+                        </div>
+                        <div class="chat-list-body">
+                            <div class="chat-list-top">
+                                <span class="chat-list-name">{{ conv.otro_usuario.name_surname }}</span>
+                                {% if conv.ultimo_mensaje %}
+                                <span class="chat-list-time">{{ conv.ultimo_mensaje.enviado_en|date:"d/m H:i" }}</span>
+                                {% endif %}
+                            </div>
+                            {% if conv.otro_usuario.rol.rol == 'Propietario/Residente' %}
+                            <span class="chat-list-tag propietario">Propietario</span>
+                            {% elif conv.otro_usuario.rol.rol == 'Proveedor' %}
+                            <span class="chat-list-tag proveedor">Proveedor</span>
+                            {% elif conv.otro_usuario.rol.rol == 'Asistente' %}
+                            <span class="chat-list-tag asistente">Asistente</span>
+                            {% endif %}
+                            <div class="chat-list-bottom">
+                                <div class="chat-list-preview">
+                                    {% if conv.ultimo_mensaje %}
+                                    {% if conv.ultimo_mensaje.archivo and not conv.ultimo_mensaje.mensaje %}<i class="bi {% if conv.ultimo_mensaje.es_imagen %}bi-image{% else %}bi-paperclip{% endif %}"></i> {% if conv.ultimo_mensaje.es_imagen %}Foto{% else %}{{ conv.ultimo_mensaje.nombre_archivo }}{% endif %}
+                                    {% else %}{{ conv.ultimo_mensaje.mensaje }}{% endif %}
+                                    {% else %}Sin mensajes todavía{% endif %}
+                                </div>
+                                {% if conv.sin_leer %}<span class="chat-unread-badge" title="Mensajes sin leer">{% if conv.sin_leer > 99 %}99+{% else %}{{ conv.sin_leer }}{% endif %}</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-secondary small p-4 text-center">Todavía no tenés conversaciones.</div>
+                    {% endfor %}
+
+                </div>
+            </div>
+
+            <!-- CONVERSACIÓN ACTIVA -->
+            <div class="chat-active-panel">
+
+                {% if chat_activo %}
+
+                <div class="chat-active-header">
+                    <a href="{% url 'chat' %}" class="chat-back-btn" title="Volver a las conversaciones"><i class="bi bi-arrow-left"></i></a>
+                    <div class="chat-active-avatar
+                        {% if otro_usuario_activo.rol.rol == 'Propietario/Residente' %} bg-propietario
+                        {% elif otro_usuario_activo.rol.rol == 'Proveedor' %} bg-proveedor
+                        {% elif otro_usuario_activo.rol.rol == 'Asistente' %} bg-asistente
+                        {% else %} bg-admin
+                        {% endif %}">
+                        {% if otro_usuario_activo.img %}
+                        <img src="{{ otro_usuario_activo.img|img_url }}" alt="" width="42" height="42">
+                        {% else %}
+                        {{ otro_usuario_activo.iniciales }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <p class="chat-active-name">
+                            {% if otro_usuario_activo.rol.rol == 'Proveedor' %}
+                            <a href="{% url 'proveedor_perfil' otro_usuario_activo.id_user %}" class="text-reset">{{ otro_usuario_activo.name_surname }}</a>
+                            {% else %}{{ otro_usuario_activo.name_surname }}{% endif %}
+                        </p>
+                        <span class="chat-active-meta">{{ otro_usuario_activo.rol.rol }}</span>
+                    </div>
+                    <div class="chat-active-actions">
+                        <button type="button" class="topbar-icon-btn"><i class="bi bi-telephone"></i></button>
+                        <button type="button" class="topbar-icon-btn"><i class="bi bi-three-dots-vertical"></i></button>
+                    </div>
+                </div>
+
+                <!-- TODO: cuando exista el módulo de Solicitudes, vincular acá
+                     la solicitud relacionada a esta conversación (si aplica). -->
+
+                <div class="chat-messages">
+
+                    {% for msg in mensajes_activos %}
+                    <div class="chat-bubble-row{% if msg.usuario_id == usuario.id_user %} mine{% endif %}">
+                        <div class="chat-bubble{% if msg.archivo and msg.es_imagen %} has-image{% endif %}">
+                            {% if msg.archivo %}
+                            {% if msg.es_imagen %}
+                            <!-- Foto: se ve en el chat y se abre grande en otra pestaña -->
+                            <a href="{{ msg.archivo|img_url }}" target="_blank" class="chat-image">
+                                <img src="{{ msg.archivo|img_url }}" alt="{{ msg.nombre_archivo }}">
+                            </a>
+                            {% else %}
+                            <!-- PDF, Word o Excel: tarjeta con ícono, nombre y descarga -->
+                            <a href="{{ msg.archivo|img_url }}" target="_blank" download="{{ msg.nombre_archivo }}" class="chat-file {{ msg.tipo_archivo }}">
+                                <span class="chat-file-icon">
+                                    {% if msg.tipo_archivo == 'pdf' %}<i class="bi bi-file-earmark-pdf-fill"></i>
+                                    {% elif msg.tipo_archivo == 'word' %}<i class="bi bi-file-earmark-word-fill"></i>
+                                    {% elif msg.tipo_archivo == 'excel' %}<i class="bi bi-file-earmark-excel-fill"></i>
+                                    {% else %}<i class="bi bi-file-earmark-fill"></i>{% endif %}
+                                </span>
+                                <span class="chat-file-name">{{ msg.nombre_archivo }}</span>
+                                <i class="bi bi-download chat-file-download"></i>
+                            </a>
+                            {% endif %}
+                            {% endif %}
+                            {% if msg.mensaje %}<div class="chat-bubble-text">{{ msg.mensaje }}</div>{% endif %}
+
+                            {% if msg.invitacion %}
+                            <!-- Invitación a una votación de contratación -->
+                            {% with inv=msg.invitacion %}
+                            <div class="chat-invite">
+                                <div class="chat-invite-head"><i class="bi bi-check2-square"></i> Votación de contratación</div>
+                                <div class="chat-invite-meta">
+                                    <span><i class="bi bi-building"></i> {{ inv.votacion.consorcio.name_consorcio }}</span>
+                                    <span><i class="bi bi-clock"></i> Cierra {{ inv.votacion.fecha_limite|date:"d/m H:i" }}</span>
+                                </div>
+
+                                {% if inv.aceptacion is None and inv.votacion.abierta and inv.proveedor_id == usuario.id_user %}
+                                <form method="post" action="{% url 'responder_invitacion' inv.pk %}" enctype="multipart/form-data" class="chat-invite-form">
+                                    {% csrf_token %}
+                                    <label class="small fw-semibold mb-1">Tu propuesta en PDF (opcional)</label>
+                                    <input type="file" name="propuesta_pdf" accept="application/pdf,.pdf" class="form-control form-control-sm mb-2">
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" name="respuesta" value="aceptar" class="btn btn-success btn-sm flex-fill"><i class="bi bi-check-lg"></i> Aceptar</button>
+                                        <button type="submit" name="respuesta" value="rechazar" class="btn btn-outline-danger btn-sm flex-fill"
+                                                onclick="return confirm('¿Rechazar la invitación?')"><i class="bi bi-x-lg"></i> Rechazar</button>
+                                    </div>
+                                </form>
+                                {% elif inv.aceptacion %}
+                                <div class="chat-invite-state ok"><i class="bi bi-check-circle-fill"></i> Aceptada{% if inv.contratado %} · Contratado{% endif %}</div>
+                                {% elif inv.aceptacion is False %}
+                                <div class="chat-invite-state no"><i class="bi bi-x-circle-fill"></i> Rechazada</div>
+                                {% elif not inv.votacion.abierta %}
+                                <div class="chat-invite-state">La votación cerró sin respuesta</div>
+                                {% else %}
+                                <div class="chat-invite-state">Esperando respuesta del proveedor</div>
+                                {% endif %}
+
+                                {% if inv.proveedor_id != usuario.id_user %}
+                                <a href="{% url 'votacion_detalle' inv.votacion_id %}" class="chat-invite-link">Ver votación <i class="bi bi-arrow-right"></i></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                            {% if msg.invitacion_reunion %}
+                            <!-- Invitación a una reunión (proveedor invitado como participante opcional) -->
+                            {% with inv=msg.invitacion_reunion %}
+                            <div class="chat-invite meet">
+                                <div class="chat-invite-head"><i class="bi bi-camera-video"></i> Invitación a una reunión</div>
+                                <div class="fw-semibold small mb-1">{{ inv.reunion.titulo }}</div>
+                                <div class="chat-invite-meta">
+                                    <span><i class="bi bi-building"></i> {{ inv.reunion.consorcio.name_consorcio }}</span>
+                                    <span><i class="bi bi-clock"></i> {{ inv.reunion.fecha_inicio|date:"d/m H:i" }}</span>
+                                    <span>{% if inv.reunion.es_virtual %}<img src="{% static 'img/google_meet.svg' %}" alt="Google Meet" class="meet-logo"> Google Meet{% else %}<i class="bi bi-geo-alt"></i> {{ inv.reunion.lugar }}{% endif %}</span>
+                                </div>
+
+                                {% if inv.respuesta == 'pendiente' and inv.reunion.activa and inv.usuario_id == usuario.id_user %}
+                                <form method="post" action="{% url 'responder_invitacion_reunion' inv.pk %}" class="chat-invite-form d-flex gap-2">
+                                    {% csrf_token %}
+                                    <button type="submit" name="respuesta" value="aceptar" class="btn btn-success btn-sm flex-fill"><i class="bi bi-check-lg"></i> Aceptar</button>
+                                    <button type="submit" name="respuesta" value="rechazar" class="btn btn-outline-danger btn-sm flex-fill"
+                                            onclick="return confirm('¿Rechazar la invitación?')"><i class="bi bi-x-lg"></i> Rechazar</button>
+                                </form>
+                                {% elif inv.respuesta == 'acepta' %}
+                                <div class="chat-invite-state ok"><i class="bi bi-check-circle-fill"></i> Aceptada · participa de la reunión</div>
+                                {% elif inv.respuesta == 'rechaza' %}
+                                <div class="chat-invite-state no"><i class="bi bi-x-circle-fill"></i> Rechazada</div>
+                                {% elif inv.reunion.estado == 'cancelada' %}
+                                <div class="chat-invite-state">La reunión se canceló</div>
+                                {% elif not inv.reunion.activa %}
+                                <div class="chat-invite-state">La reunión terminó sin respuesta</div>
+                                {% else %}
+                                <div class="chat-invite-state">Esperando respuesta del proveedor</div>
+                                {% endif %}
+
+                                {% if inv.respuesta != 'rechaza' %}
+                                <a href="{% url 'reunion_detalle' inv.reunion_id %}" class="chat-invite-link">Ver reunión <i class="bi bi-arrow-right"></i></a>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% endif %}
+                            <span class="chat-bubble-time">{{ msg.enviado_en|date:"d/m H:i" }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-secondary small text-center py-4">Todavía no hay mensajes en esta conversación.</div>
+                    {% endfor %}
+
+                </div>
+
+                {% if messages %}
+                <div class="chat-alerts">
+                    {% for m in messages %}<div class="alert alert-{% if m.tags == 'error' %}danger{% else %}{{ m.tags }}{% endif %} py-2 mb-0 small" role="alert">{{ m }}</div>{% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Archivo elegido, antes de enviarlo -->
+                <div class="chat-attach-preview" id="adjuntoPreview" hidden>
+                    <i class="bi bi-paperclip"></i>
+                    <span id="adjuntoNombre"></span>
+                    <button type="button" class="btn-close btn-sm ms-auto" id="adjuntoQuitar" title="Quitar archivo"></button>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="chat-input-row" id="chatForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="chat_id" value="{{ chat_activo.id_chat }}">
+                    <!-- PDF, Word, Excel o fotos -->
+                    <input type="file" name="archivo" id="adjuntoInput" hidden
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,image/jpeg,image/png,image/gif,image/webp">
+                    <button type="button" class="btn-icon" title="Adjuntar PDF, Word, Excel o foto"
+                            onclick="document.getElementById('adjuntoInput').click()"><i class="bi bi-paperclip"></i></button>
+                    <input type="text" name="mensaje" id="mensajeInput" placeholder="Escribí un mensaje..." autocomplete="off" required autofocus>
+                    <button type="submit" class="chat-send-btn"><i class="bi bi-send-fill"></i></button>
+                </form>
+
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center h-100 text-secondary">
+                    Elegí una conversación para empezar a chatear.
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JS propio -->
+<script src="{% static 'js/chat.js' %}?v=4"></script>
+
+</body>
+</html>
